@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 namespace OpenTelemetry.Metrics;
 
 /// <summary>
@@ -21,7 +23,7 @@ internal static class Base2ExponentialBucketHistogramHelper
     {
         if (scale > 0)
         {
-#if NET
+#if NET6_0_OR_GREATER
             var inverseFactor = Math.ScaleB(Ln2, -scale);
 #else
             var inverseFactor = ScaleB(Ln2, -scale);
@@ -47,7 +49,7 @@ internal static class Base2ExponentialBucketHistogramHelper
                 return double.Epsilon;
             }
 
-#if NET
+#if NET6_0_OR_GREATER
             return Math.ScaleB(1, n);
 #else
             return ScaleB(1, n);
@@ -55,7 +57,7 @@ internal static class Base2ExponentialBucketHistogramHelper
         }
     }
 
-#if !NET
+#if !NET6_0_OR_GREATER
     // Math.ScaleB was introduced in .NET Core 3.0.
     // This implementation is from:
     // https://github.com/dotnet/runtime/blob/v7.0.0/src/libraries/System.Private.CoreLib/src/System/Math.cs#L1494

@@ -58,7 +58,7 @@ and
 enabled:
 
 ```sh
-./prometheus --enable-feature=exemplar-storage --web.enable-otlp-receiver
+./prometheus --enable-feature=exemplar-storage --enable-feature=otlp-write-receiver
 ```
 
 ## Install and configure Grafana

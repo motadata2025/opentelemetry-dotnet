@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics;
 using OpenTelemetry.Context.Propagation;
 
@@ -83,14 +85,13 @@ public readonly struct SpanContext : IEquatable<SpanContext>
     {
         get
         {
-            var traceState = this.ActivityContext.TraceState;
-            if (string.IsNullOrEmpty(traceState))
+            if (string.IsNullOrEmpty(this.ActivityContext.TraceState))
             {
                 return Enumerable.Empty<KeyValuePair<string, string>>();
             }
 
             var traceStateResult = new List<KeyValuePair<string, string>>();
-            TraceStateUtilsNew.AppendTraceState(traceState!, traceStateResult);
+            TraceStateUtilsNew.AppendTraceState(this.ActivityContext.TraceState, traceStateResult);
             return traceStateResult;
         }
     }

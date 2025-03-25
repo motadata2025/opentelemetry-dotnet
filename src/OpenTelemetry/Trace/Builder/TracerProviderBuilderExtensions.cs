@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics;
-#if NET
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 #endif
 using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +27,7 @@ public static class TracerProviderBuilderExtensions
     /// <remarks>
     /// This method is not supported in native AOT or Mono Runtime as of .NET 8.
     /// </remarks>
-#if NET
+#if NET7_0_OR_GREATER
     [RequiresDynamicCode("The code for detecting exception and setting error status might not be available.")]
 #endif
     public static TracerProviderBuilder SetErrorStatusOnException(this TracerProviderBuilder tracerProviderBuilder, bool enabled = true)
@@ -75,7 +75,7 @@ public static class TracerProviderBuilderExtensions
     /// <param name="tracerProviderBuilder"><see cref="TracerProviderBuilder"/>.</param>
     /// <returns>The supplied <see cref="TracerProviderBuilder"/> for chaining.</returns>
     public static TracerProviderBuilder SetSampler<
-#if NET
+#if NET6_0_OR_GREATER
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
 #endif
     T>(this TracerProviderBuilder tracerProviderBuilder)
@@ -195,7 +195,7 @@ public static class TracerProviderBuilderExtensions
     /// <param name="tracerProviderBuilder"><see cref="TracerProviderBuilder"/>.</param>
     /// <returns>The supplied <see cref="TracerProviderBuilder"/> for chaining.</returns>
     public static TracerProviderBuilder AddProcessor<
-#if NET
+#if NET6_0_OR_GREATER
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
 #endif
     T>(this TracerProviderBuilder tracerProviderBuilder)

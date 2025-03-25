@@ -1,13 +1,15 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if NET
+#nullable enable
+
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 #endif
 
 namespace Microsoft.Extensions.Options;
 
-#if NET
+#if NET6_0_OR_GREATER
 internal sealed class SingletonOptionsManager<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TOptions> : IOptionsMonitor<TOptions>, IOptionsSnapshot<TOptions>
 #else
 internal sealed class SingletonOptionsManager<TOptions> : IOptionsMonitor<TOptions>, IOptionsSnapshot<TOptions>

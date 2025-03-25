@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics;
-#if !NET
+#if !NET6_0_OR_GREATER
 using System.Net.Http;
 #endif
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient;
-using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Serializer;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Xunit;
@@ -15,32 +14,22 @@ using OtlpCollector = OpenTelemetry.Proto.Collector.Trace.V1;
 
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol.Tests;
 
-public sealed class OtlpHttpTraceExportClientTests : IDisposable
+public class OtlpHttpTraceExportClientTests
 {
     private static readonly SdkLimitOptions DefaultSdkLimitOptions = new();
-
-    private readonly ActivityListener activityListener;
 
     static OtlpHttpTraceExportClientTests()
     {
         Activity.DefaultIdFormat = ActivityIdFormat.W3C;
         Activity.ForceDefaultIdFormat = true;
-    }
 
-    public OtlpHttpTraceExportClientTests()
-    {
-        this.activityListener = new ActivityListener
+        var listener = new ActivityListener
         {
             ShouldListenTo = _ => true,
-            Sample = (ref ActivityCreationOptions<ActivityContext> options) => ActivitySamplingResult.AllDataAndRecorded,
+            Sample = (ref ActivityCreationOptions<ActivityContext> options) => ActivitySamplingResult.AllData,
         };
 
-        ActivitySource.AddActivityListener(this.activityListener);
-    }
-
-    public void Dispose()
-    {
-        this.activityListener.Dispose();
+        ActivitySource.AddActivityListener(listener);
     }
 
     [Fact]
@@ -54,7 +43,7 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
             Headers = $"{header1.Name}={header1.Value}, {header2.Name} = {header2.Value}",
         };
 
-        var client = new OtlpHttpExportClient(options, options.HttpClientFactory(), "/v1/traces");
+        var client = new OtlpHttpTraceExportClient(options, options.HttpClientFactory());
 
         Assert.NotNull(client.HttpClient);
 
@@ -74,8 +63,8 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
     public void SendExportRequest_ExportTraceServiceRequest_SendsCorrectHttpRequest(bool includeServiceNameInResource)
     {
         // Arrange
-        var evenTags = new[] { new KeyValuePair<string, object?>("k0", "v0") };
-        var oddTags = new[] { new KeyValuePair<string, object?>("k1", "v1") };
+        var evenTags = new[] { new KeyValuePair<string, object>("k0", "v0") };
+        var oddTags = new[] { new KeyValuePair<string, object>("k1", "v1") };
         var sources = new[]
         {
             new ActivitySource("even", "2.4.6"),
@@ -96,7 +85,7 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
 
         var httpClient = new HttpClient(testHttpHandler);
 
-        var exportClient = new OtlpHttpExportClient(options, httpClient, string.Empty);
+        var exportClient = new OtlpHttpTraceExportClient(options, httpClient);
 
         var resourceBuilder = ResourceBuilder.CreateEmpty();
         if (includeServiceNameInResource)
@@ -127,8 +116,7 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
             var activityKind = isEven ? ActivityKind.Client : ActivityKind.Server;
             var activityTags = isEven ? evenTags : oddTags;
 
-            using Activity? activity = source.StartActivity($"span-{i}", activityKind, parentContext: default, activityTags);
-            Assert.NotNull(activity);
+            using Activity activity = source.StartActivity($"span-{i}", activityKind, parentContext: default, activityTags);
             processor.OnEnd(activity);
         }
 
@@ -142,10 +130,10 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
             var deadlineUtc = DateTime.UtcNow.AddMilliseconds(httpClient.Timeout.TotalMilliseconds);
             var request = new OtlpCollector.ExportTraceServiceRequest();
 
-            var (buffer, contentLength) = CreateTraceExportRequest(DefaultSdkLimitOptions, batch, resourceBuilder.Build());
+            request.AddBatch(DefaultSdkLimitOptions, resourceBuilder.Build().ToOtlpResource(), batch);
 
             // Act
-            var result = exportClient.SendExportRequest(buffer, contentLength, deadlineUtc);
+            var result = exportClient.SendExportRequest(request, deadlineUtc);
 
             var httpRequest = testHttpHandler.HttpRequestMessage;
 
@@ -153,7 +141,6 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
             Assert.True(result.Success);
             Assert.NotNull(httpRequest);
             Assert.Equal(HttpMethod.Post, httpRequest.Method);
-            Assert.NotNull(httpRequest.RequestUri);
             Assert.Equal("http://localhost:4317/", httpRequest.RequestUri.AbsoluteUri);
             Assert.Equal(OtlpExporterOptions.StandardHeaders.Length + 2, httpRequest.Headers.Count());
             Assert.Contains(httpRequest.Headers, h => h.Key == header1.Name && h.Value.First() == header1.Value);
@@ -165,11 +152,8 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
             }
 
             Assert.NotNull(testHttpHandler.HttpRequestContent);
-
-            // TODO: Revisit once the HttpClient part is overridden.
-            // Assert.IsType<ProtobufOtlpHttpExportClient.ExportRequestContent>(httpRequest.Content);
-            Assert.NotNull(httpRequest.Content);
-            Assert.Contains(httpRequest.Content.Headers, h => h.Key == "Content-Type" && h.Value.First() == OtlpHttpExportClient.MediaHeaderValue.ToString());
+            Assert.IsType<OtlpHttpTraceExportClient.ExportRequestContent>(httpRequest.Content);
+            Assert.Contains(httpRequest.Content.Headers, h => h.Key == "Content-Type" && h.Value.First() == OtlpHttpTraceExportClient.MediaContentType);
 
             var exportTraceRequest = OtlpCollector.ExportTraceServiceRequest.Parser.ParseFrom(testHttpHandler.HttpRequestContent);
             Assert.NotNull(exportTraceRequest);
@@ -183,15 +167,8 @@ public sealed class OtlpHttpTraceExportClientTests : IDisposable
             }
             else
             {
-                Assert.DoesNotContain(resourceSpan.Resource.Attributes, kvp => kvp.Key == ResourceSemanticConventions.AttributeServiceName);
+                Assert.Contains(resourceSpan.Resource.Attributes, (kvp) => kvp.Key == ResourceSemanticConventions.AttributeServiceName && kvp.Value.ToString().Contains("unknown_service:"));
             }
         }
-    }
-
-    private static (byte[] Buffer, int ContentLength) CreateTraceExportRequest(SdkLimitOptions sdkOptions, in Batch<Activity> batch, Resource resource)
-    {
-        var buffer = new byte[4096];
-        var writePosition = ProtobufOtlpTraceSerializer.WriteTraceData(ref buffer, 0, sdkOptions, resource, batch);
-        return (buffer, writePosition);
     }
 }

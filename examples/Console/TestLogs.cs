@@ -9,7 +9,7 @@ namespace Examples.Console;
 
 internal class TestLogs
 {
-    internal static int Run(LogsOptions options)
+    internal static object Run(LogsOptions options)
     {
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
@@ -17,8 +17,7 @@ internal class TestLogs
             {
                 opt.IncludeFormattedMessage = true;
                 opt.IncludeScopes = true;
-
-                if ("otlp".Equals(options.UseExporter, StringComparison.OrdinalIgnoreCase))
+                if (options.UseExporter.Equals("otlp", StringComparison.OrdinalIgnoreCase))
                 {
                     /*
                      * Prerequisite to run this example:
@@ -44,46 +43,31 @@ internal class TestLogs
 
                     var protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
 
-                    if (!string.IsNullOrEmpty(options.Protocol))
+                    if (options.Protocol.Trim().ToLower().Equals("grpc"))
                     {
-                        switch (options.Protocol.Trim())
-                        {
-                            case "grpc":
-                                protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-                                break;
-                            case "http/protobuf":
-                                protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
-                                break;
-                            default:
-                                System.Console.WriteLine($"Export protocol {options.Protocol} is not supported. Default protocol 'grpc' will be used.");
-                                break;
-                        }
+                        protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                    }
+                    else if (options.Protocol.Trim().ToLower().Equals("http/protobuf"))
+                    {
+                        protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
                     }
                     else
                     {
-                        System.Console.WriteLine("Protocol is null or empty. Default protocol 'grpc' will be used.");
+                        System.Console.WriteLine($"Export protocol {options.Protocol} is not supported. Default protocol 'grpc' will be used.");
                     }
 
                     var processorType = ExportProcessorType.Batch;
-
-                    if (!string.IsNullOrEmpty(options.ProcessorType))
+                    if (options.ProcessorType.Trim().ToLower().Equals("batch"))
                     {
-                        switch (options.ProcessorType.Trim())
-                        {
-                            case "batch":
-                                processorType = ExportProcessorType.Batch;
-                                break;
-                            case "simple":
-                                processorType = ExportProcessorType.Simple;
-                                break;
-                            default:
-                                System.Console.WriteLine($"Export processor type {options.ProcessorType} is not supported. Default processor type 'batch' will be used.");
-                                break;
-                        }
+                        processorType = ExportProcessorType.Batch;
+                    }
+                    else if (options.ProcessorType.Trim().ToLower().Equals("simple"))
+                    {
+                        processorType = ExportProcessorType.Simple;
                     }
                     else
                     {
-                        System.Console.WriteLine("Processor type is null or empty. Default processor type 'batch' will be used.");
+                        System.Console.WriteLine($"Export processor type {options.ProcessorType} is not supported. Default processor type 'batch' will be used.");
                     }
 
                     opt.AddOtlpExporter((exporterOptions, processorOptions) =>
@@ -119,6 +103,6 @@ internal class TestLogs
             logger.LogInformation("Hello from {name} {price}.", "tomato", 2.99);
         }
 
-        return 0;
+        return null;
     }
 }

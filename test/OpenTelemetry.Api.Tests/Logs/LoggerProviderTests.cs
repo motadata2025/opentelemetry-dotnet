@@ -1,7 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
+#endif
 using Xunit;
 
 namespace OpenTelemetry.Logs.Tests;
@@ -64,7 +68,9 @@ public sealed class LoggerProviderTests
         internal override bool TryCreateLogger(
 #endif
             string? name,
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             [NotNullWhen(true)]
+#endif
             out Logger? logger)
         {
             logger = new TestLogger(name);

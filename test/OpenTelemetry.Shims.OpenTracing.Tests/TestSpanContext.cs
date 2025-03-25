@@ -5,7 +5,7 @@ using OpenTracing;
 
 namespace OpenTelemetry.Shims.OpenTracing.Tests;
 
-internal sealed class TestSpanContext : ISpanContext
+internal class TestSpanContext : ISpanContext
 {
     public string TraceId => throw new NotImplementedException();
 

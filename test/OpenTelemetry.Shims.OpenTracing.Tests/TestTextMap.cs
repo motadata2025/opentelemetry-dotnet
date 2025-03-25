@@ -6,7 +6,7 @@ using OpenTracing.Propagation;
 
 namespace OpenTelemetry.Shims.OpenTracing.Tests;
 
-internal sealed class TestTextMap : ITextMap
+internal class TestTextMap : ITextMap
 {
     public bool GetEnumeratorCalled { get; private set; }
 

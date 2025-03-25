@@ -10,7 +10,7 @@ public static class Program
         return StressTestFactory.RunSynchronously<DemoStressTest>(args);
     }
 
-    private sealed class DemoStressTest : StressTests<StressTestOptions>
+    private sealed class DemoStressTest : StressTest<StressTestOptions>
     {
         public DemoStressTest(StressTestOptions options)
             : base(options)

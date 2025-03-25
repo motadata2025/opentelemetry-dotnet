@@ -1,14 +1,20 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics;
+using Google.Protobuf;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient;
 using OpenTelemetry.PersistentStorage.Abstractions;
 using OpenTelemetry.PersistentStorage.FileSystem;
+using OpenTelemetry.Proto.Collector.Logs.V1;
+using OpenTelemetry.Proto.Collector.Metrics.V1;
+using OpenTelemetry.Proto.Collector.Trace.V1;
 
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Transmission;
 
-internal sealed class OtlpExporterPersistentStorageTransmissionHandler : OtlpExporterTransmissionHandler, IDisposable
+internal sealed class OtlpExporterPersistentStorageTransmissionHandler<TRequest> : OtlpExporterTransmissionHandler<TRequest>, IDisposable
 {
     private const int RetryIntervalInMilliseconds = 60000;
     private readonly ManualResetEvent shutdownEvent = new(false);
@@ -16,22 +22,26 @@ internal sealed class OtlpExporterPersistentStorageTransmissionHandler : OtlpExp
     private readonly AutoResetEvent exportEvent = new(false);
     private readonly Thread thread;
     private readonly PersistentBlobProvider persistentBlobProvider;
+    private readonly Func<byte[], TRequest> requestFactory;
     private bool disposed;
 
-    public OtlpExporterPersistentStorageTransmissionHandler(IExportClient exportClient, double timeoutMilliseconds, string storagePath)
-        : this(new FileBlobProvider(storagePath), exportClient, timeoutMilliseconds)
+    public OtlpExporterPersistentStorageTransmissionHandler(IExportClient<TRequest> exportClient, double timeoutMilliseconds, Func<byte[], TRequest> requestFactory, string storagePath)
+        : this(new FileBlobProvider(storagePath), exportClient, timeoutMilliseconds, requestFactory)
     {
     }
 
-    internal OtlpExporterPersistentStorageTransmissionHandler(PersistentBlobProvider persistentBlobProvider, IExportClient exportClient, double timeoutMilliseconds)
+    internal OtlpExporterPersistentStorageTransmissionHandler(PersistentBlobProvider persistentBlobProvider, IExportClient<TRequest> exportClient, double timeoutMilliseconds, Func<byte[], TRequest> requestFactory)
         : base(exportClient, timeoutMilliseconds)
     {
         Debug.Assert(persistentBlobProvider != null, "persistentBlobProvider was null");
+        Debug.Assert(requestFactory != null, "requestFactory was null");
+
         this.persistentBlobProvider = persistentBlobProvider!;
+        this.requestFactory = requestFactory!;
 
         this.thread = new Thread(this.RetryStoredRequests)
         {
-            Name = "OtlpExporter Persistent Retry Storage",
+            Name = $"OtlpExporter Persistent Retry Storage - {typeof(TRequest)}",
             IsBackground = true,
         };
 
@@ -46,10 +56,36 @@ internal sealed class OtlpExporterPersistentStorageTransmissionHandler : OtlpExp
         return this.dataExportNotification.WaitOne(timeOutMilliseconds);
     }
 
-    protected override bool OnSubmitRequestFailure(byte[] request, int contentLength, ExportClientResponse response)
+    protected override bool OnSubmitRequestFailure(TRequest request, ExportClientResponse response)
     {
-        Debug.Assert(request != null, "request was null");
-        return RetryHelper.ShouldRetryRequest(response, OtlpRetry.InitialBackoffMilliseconds, out _) && this.persistentBlobProvider.TryCreateBlob(request!, out _);
+        if (RetryHelper.ShouldRetryRequest(request, response, OtlpRetry.InitialBackoffMilliseconds, out _))
+        {
+            byte[]? data = null;
+            if (request is ExportTraceServiceRequest traceRequest)
+            {
+                data = traceRequest.ToByteArray();
+            }
+            else if (request is ExportMetricsServiceRequest metricsRequest)
+            {
+                data = metricsRequest.ToByteArray();
+            }
+            else if (request is ExportLogsServiceRequest logsRequest)
+            {
+                data = logsRequest.ToByteArray();
+            }
+            else
+            {
+                Debug.Fail("Unexpected request type encountered");
+                data = null;
+            }
+
+            if (data != null)
+            {
+                return this.persistentBlobProvider.TryCreateBlob(data, out _);
+            }
+        }
+
+        return false;
     }
 
     protected override void OnShutdown(int timeoutMilliseconds)
@@ -123,7 +159,8 @@ internal sealed class OtlpExporterPersistentStorageTransmissionHandler : OtlpExp
                     if (blob.TryLease((int)this.TimeoutMilliseconds) && blob.TryRead(out var data))
                     {
                         var deadlineUtc = DateTime.UtcNow.AddMilliseconds(this.TimeoutMilliseconds);
-                        if (this.TryRetryRequest(data, data.Length, deadlineUtc, out var response) || !RetryHelper.ShouldRetryRequest(response, OtlpRetry.InitialBackoffMilliseconds, out var retryInfo))
+                        var request = this.requestFactory.Invoke(data);
+                        if (this.TryRetryRequest(request, deadlineUtc, out var response) || !RetryHelper.ShouldRetryRequest(request, response, OtlpRetry.InitialBackoffMilliseconds, out var retryInfo))
                         {
                             blob.TryDelete();
                         }

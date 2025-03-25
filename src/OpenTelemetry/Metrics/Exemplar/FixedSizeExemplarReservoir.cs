@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if EXPOSE_EXPERIMENTAL_FEATURES && NET
+#if EXPOSE_EXPERIMENTAL_FEATURES && NET8_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 #endif
 using OpenTelemetry.Internal;
@@ -14,7 +14,7 @@ namespace OpenTelemetry.Metrics;
 /// number of <see cref="Exemplar"/>s.
 /// </summary>
 /// <remarks><inheritdoc cref="ExemplarReservoir" path="/remarks/para[@experimental-warning='true']"/></remarks>
-#if NET
+#if NET8_0_OR_GREATER
 [Experimental(DiagnosticDefinitions.ExemplarReservoirExperimentalApi, UrlFormat = DiagnosticDefinitions.ExperimentalApiUrlFormat)]
 #endif
 public

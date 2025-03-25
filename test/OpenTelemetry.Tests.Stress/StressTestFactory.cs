@@ -8,13 +8,13 @@ namespace OpenTelemetry.Tests.Stress;
 public static class StressTestFactory
 {
     public static int RunSynchronously<TStressTest>(string[] commandLineArguments)
-        where TStressTest : StressTests<StressTestOptions>
+        where TStressTest : StressTest<StressTestOptions>
     {
         return RunSynchronously<TStressTest, StressTestOptions>(commandLineArguments);
     }
 
     public static int RunSynchronously<TStressTest, TStressTestOptions>(string[] commandLineArguments)
-        where TStressTest : StressTests<TStressTestOptions>
+        where TStressTest : StressTest<TStressTestOptions>
         where TStressTestOptions : StressTestOptions
     {
         return Parser.Default.ParseArguments<TStressTestOptions>(commandLineArguments)

@@ -1,8 +1,10 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Collections.Concurrent;
-#if NET
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 #endif
 
@@ -34,7 +36,7 @@ public class TracerProvider : BaseProvider
     /// <param name="version">Version of the instrumentation library.</param>
     /// <returns>Tracer instance.</returns>
     public Tracer GetTracer(
-#if NET
+#if NET6_0_OR_GREATER
         [AllowNull]
 #endif
         string name,
@@ -78,7 +80,7 @@ public class TracerProvider : BaseProvider
     {
         if (disposing)
         {
-            var tracers = Interlocked.Exchange(ref this.Tracers, null);
+            var tracers = Interlocked.CompareExchange(ref this.Tracers, null, this.Tracers);
             if (tracers != null)
             {
                 lock (tracers)

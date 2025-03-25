@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if NET
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 #endif
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +26,7 @@ public static class OpenTelemetryDependencyInjectionMeterProviderBuilderExtensio
     /// <param name="meterProviderBuilder"><see cref="MeterProviderBuilder"/>.</param>
     /// <returns>The supplied <see cref="MeterProviderBuilder"/> for chaining.</returns>
     public static MeterProviderBuilder AddInstrumentation<
-#if NET
+#if NET6_0_OR_GREATER
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
 #endif
     T>(this MeterProviderBuilder meterProviderBuilder)
@@ -36,7 +36,7 @@ public static class OpenTelemetryDependencyInjectionMeterProviderBuilderExtensio
 
         meterProviderBuilder.ConfigureBuilder((sp, builder) =>
         {
-            builder.AddInstrumentation(sp.GetRequiredService<T>);
+            builder.AddInstrumentation(() => sp.GetRequiredService<T>());
         });
 
         return meterProviderBuilder;

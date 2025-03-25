@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Configuration;
@@ -69,7 +71,7 @@ public class MetricExemplarTests : MetricTestsBase
         DateTime testStartTime = DateTime.UtcNow;
         var exportedItems = new List<Metric>();
 
-        using var meter = new Meter(Utils.GetCurrentMethodName());
+        using var meter = new Meter($"{Utils.GetCurrentMethodName()}");
         var counterDouble = meter.CreateCounter<double>("testCounterDouble");
         var counterLong = meter.CreateCounter<long>("testCounterLong");
 
@@ -184,15 +186,15 @@ public class MetricExemplarTests : MetricTestsBase
         DateTime testStartTime = DateTime.UtcNow;
         var exportedItems = new List<Metric>();
 
-        (double Value, bool ExpectTraceId)[] measurementValues =
-        [
+        (double Value, bool ExpectTraceId)[] measurementValues = new (double Value, bool ExpectTraceId)[]
+        {
             (18D, false),
-            (19D, false)
-        ];
+            (19D, false),
+        };
 
         int measurementIndex = 0;
 
-        using var meter = new Meter(Utils.GetCurrentMethodName());
+        using var meter = new Meter($"{Utils.GetCurrentMethodName()}");
         var gaugeDouble = meter.CreateObservableGauge("testGaugeDouble", () => measurementValues[measurementIndex].Value);
         var gaugeLong = meter.CreateObservableGauge("testGaugeLong", () => (long)measurementValues[measurementIndex].Value);
         var counterDouble = meter.CreateObservableCounter("counterDouble", () => measurementValues[measurementIndex].Value);
@@ -275,7 +277,7 @@ public class MetricExemplarTests : MetricTestsBase
         DateTime testStartTime = DateTime.UtcNow;
         var exportedItems = new List<Metric>();
 
-        using var meter = new Meter(Utils.GetCurrentMethodName());
+        using var meter = new Meter($"{Utils.GetCurrentMethodName()}");
         var histogramWithBucketsAndMinMaxDouble = meter.CreateHistogram<double>("histogramWithBucketsAndMinMaxDouble");
         var histogramWithBucketsDouble = meter.CreateHistogram<double>("histogramWithBucketsDouble");
         var histogramWithBucketsAndMinMaxLong = meter.CreateHistogram<long>("histogramWithBucketsAndMinMaxLong");
@@ -329,7 +331,7 @@ public class MetricExemplarTests : MetricTestsBase
 
         var measurementValues = buckets
             /* 2000 is here to test overflow measurement */
-            .Concat([2000.0])
+            .Concat(new double[] { 2000 })
             .Select(b => (Value: b, ExpectTraceId: false))
             .ToArray();
         foreach (var value in measurementValues)
@@ -425,7 +427,7 @@ public class MetricExemplarTests : MetricTestsBase
         DateTime testStartTime = DateTime.UtcNow;
         var exportedItems = new List<Metric>();
 
-        using var meter = new Meter(Utils.GetCurrentMethodName());
+        using var meter = new Meter($"{Utils.GetCurrentMethodName()}");
         var histogramWithoutBucketsAndMinMaxDouble = meter.CreateHistogram<double>("histogramWithoutBucketsAndMinMaxDouble");
         var histogramWithoutBucketsDouble = meter.CreateHistogram<double>("histogramWithoutBucketsDouble");
         var histogramWithoutBucketsAndMinMaxLong = meter.CreateHistogram<long>("histogramWithoutBucketsAndMinMaxLong");
@@ -553,7 +555,7 @@ public class MetricExemplarTests : MetricTestsBase
         DateTime testStartTime = DateTime.UtcNow;
         var exportedItems = new List<Metric>();
 
-        using var meter = new Meter(Utils.GetCurrentMethodName());
+        using var meter = new Meter($"{Utils.GetCurrentMethodName()}");
         var exponentialHistogramWithMinMaxDouble = meter.CreateHistogram<double>("exponentialHistogramWithMinMaxDouble");
         var exponentialHistogramDouble = meter.CreateHistogram<double>("exponentialHistogramDouble");
         var exponentialHistogramWithMinMaxLong = meter.CreateHistogram<long>("exponentialHistogramWithMinMaxLong");
@@ -674,7 +676,7 @@ public class MetricExemplarTests : MetricTestsBase
     {
         var exportedItems = new List<Metric>();
 
-        using var meter = new Meter(Utils.GetCurrentMethodName());
+        using var meter = new Meter($"{Utils.GetCurrentMethodName()}");
 
         var counter = meter.CreateCounter<long>("testCounter");
 
@@ -721,7 +723,7 @@ public class MetricExemplarTests : MetricTestsBase
     {
         var exportedItems = new List<Metric>();
 
-        using var meter = new Meter(Utils.GetCurrentMethodName());
+        using var meter = new Meter($"{Utils.GetCurrentMethodName()}");
 
         var histogram = meter.CreateHistogram<double>("testHistogram");
 
@@ -734,7 +736,7 @@ public class MetricExemplarTests : MetricTestsBase
                 histogram.Name,
                 new MetricStreamConfiguration()
                 {
-                    TagKeys = enableTagFiltering ? ["key1"] : null,
+                    TagKeys = enableTagFiltering ? new string[] { "key1" } : null,
                     ExemplarReservoirFactory = () =>
                     {
                         if (testExemplarReservoir != null)

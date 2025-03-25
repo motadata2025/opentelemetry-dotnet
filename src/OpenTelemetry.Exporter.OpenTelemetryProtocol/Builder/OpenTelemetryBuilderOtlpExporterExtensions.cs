@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using Microsoft.Extensions.Configuration;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Internal;
@@ -88,8 +90,8 @@ public static class OpenTelemetryBuilderOtlpExporterExtensions
     /// <para><see cref="IConfiguration"/> to bind onto <see cref="OtlpExporterBuilderOptions"/>.</para>
     /// <para>Notes:
     /// <list type="bullet">
-    /// <item docLink="true"><see href="https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md"/>
-    /// for details on the configuration schema.</item>
+    /// <item docLink="true">See [TODO:Add doc link] for details on the configuration
+    /// schema.</item>
     /// <item>The <see cref="OtlpExporterBuilderOptions"/> instance will be
     /// named "otlp" by default when calling this method.</item>
     /// </list>

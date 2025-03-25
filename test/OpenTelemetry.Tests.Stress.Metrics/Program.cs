@@ -24,7 +24,7 @@ public static class Program
         return StressTestFactory.RunSynchronously<MetricsStressTest, MetricsStressTestOptions>(args);
     }
 
-    private sealed class MetricsStressTest : StressTests<MetricsStressTestOptions>
+    private sealed class MetricsStressTest : StressTest<MetricsStressTestOptions>
     {
         private const int ArraySize = 10;
         private const int MaxHistogramMeasurement = 1000;
@@ -51,7 +51,7 @@ public static class Program
 
             if (options.PrometheusTestMetricsPort != 0)
             {
-                builder.AddPrometheusHttpListener(o => o.UriPrefixes = [$"http://localhost:{options.PrometheusTestMetricsPort}/"]);
+                builder.AddPrometheusHttpListener(o => o.UriPrefixes = new string[] { $"http://localhost:{options.PrometheusTestMetricsPort}/" });
             }
 
             if (options.EnableExemplars)
@@ -62,8 +62,8 @@ public static class Program
             if (options.AddViewToFilterTags)
             {
                 builder
-                    .AddView("TestCounter", new MetricStreamConfiguration { TagKeys = ["DimName1"] })
-                    .AddView("TestHistogram", new MetricStreamConfiguration { TagKeys = ["DimName1"] });
+                    .AddView("TestCounter", new MetricStreamConfiguration { TagKeys = new string[] { "DimName1" } })
+                    .AddView("TestHistogram", new MetricStreamConfiguration { TagKeys = new string[] { "DimName1" } });
             }
 
             if (options.AddOtlpExporter)
@@ -75,12 +75,6 @@ public static class Program
             }
 
             this.meterProvider = builder.Build();
-        }
-
-        public override void Dispose()
-        {
-            this.meterProvider.Dispose();
-            base.Dispose();
         }
 
         protected override void WriteRunInformationToConsole()
@@ -110,6 +104,16 @@ public static class Program
                    new("DimName2", DimensionValues[random.Next(0, ArraySize)]),
                    new("DimName3", DimensionValues[random.Next(0, ArraySize)]));
             }
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+            {
+                this.meterProvider.Dispose();
+            }
+
+            base.Dispose(isDisposing);
         }
     }
 

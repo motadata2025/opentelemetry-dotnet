@@ -4,7 +4,6 @@
 using System.Diagnostics.Tracing;
 using System.Globalization;
 using System.Reflection;
-using Xunit.Sdk;
 
 namespace OpenTelemetry.Tests;
 
@@ -27,7 +26,7 @@ internal static class EventSourceTestHelper
             object[] eventArguments = GenerateEventArguments(eventMethod);
             eventMethod.Invoke(eventSource, eventArguments);
 
-            EventWrittenEventArgs? actualEvent = listener.Messages.FirstOrDefault(x => x.EventName == eventMethod.Name);
+            EventWrittenEventArgs actualEvent = listener.Messages.FirstOrDefault(x => x.EventName == eventMethod.Name);
 
             if (actualEvent == null)
             {
@@ -35,11 +34,11 @@ internal static class EventSourceTestHelper
                 actualEvent = listener.Messages.FirstOrDefault(x => x.EventId == 0);
                 if (actualEvent != null)
                 {
-                    throw new InvalidOperationException(actualEvent.Message);
+                    throw new Exception(actualEvent.Message);
                 }
 
                 // give up
-                throw new InvalidOperationException("Listener failed to collect event.");
+                throw new Exception("Listener failed to collect event.");
             }
 
             VerifyEventId(eventMethod, actualEvent);
@@ -48,9 +47,9 @@ internal static class EventSourceTestHelper
         }
         catch (Exception e)
         {
-            var name = eventMethod.DeclaringType?.Name + "." + eventMethod.Name;
+            var name = eventMethod.DeclaringType.Name + "." + eventMethod.Name;
 
-            throw new InvalidOperationException("Method '" + name + "' is implemented incorrectly.", e);
+            throw new Exception("Method '" + name + "' is implemented incorrectly.", e);
         }
         finally
         {
@@ -79,7 +78,7 @@ internal static class EventSourceTestHelper
 
         if (parameter.ParameterType.IsValueType)
         {
-            return Activator.CreateInstance(parameter.ParameterType)!;
+            return Activator.CreateInstance(parameter.ParameterType);
         }
 
         throw new NotSupportedException("Complex types are not supported");
@@ -100,14 +99,13 @@ internal static class EventSourceTestHelper
     private static void VerifyEventMessage(MethodInfo eventMethod, EventWrittenEventArgs actualEvent, object[] eventArguments)
     {
         string expectedMessage = eventArguments.Length == 0
-            ? GetEventAttribute(eventMethod).Message!
-            : string.Format(CultureInfo.InvariantCulture, GetEventAttribute(eventMethod).Message!, eventArguments);
-        string actualMessage = string.Format(CultureInfo.InvariantCulture, actualEvent.Message!, actualEvent.Payload!.ToArray());
+            ? GetEventAttribute(eventMethod).Message
+            : string.Format(CultureInfo.InvariantCulture, GetEventAttribute(eventMethod).Message, eventArguments);
+        string actualMessage = string.Format(CultureInfo.InvariantCulture, actualEvent.Message, actualEvent.Payload.ToArray());
         AssertEqual(nameof(VerifyEventMessage), expectedMessage, actualMessage);
     }
 
     private static void AssertEqual<T>(string methodName, T expected, T actual)
-        where T : notnull
     {
         if (!expected.Equals(actual))
         {
@@ -117,7 +115,7 @@ internal static class EventSourceTestHelper
                 methodName,
                 expected,
                 actual);
-            throw EqualException.ForMismatchedValuesWithError(expected, actual, banner: errorMessage);
+            throw new Exception(errorMessage);
         }
     }
 
@@ -129,6 +127,6 @@ internal static class EventSourceTestHelper
     private static IEnumerable<MethodInfo> GetEventMethods(EventSource eventSource)
     {
         MethodInfo[] methods = eventSource.GetType().GetMethods();
-        return methods.Where(m => m.GetCustomAttributes(typeof(EventAttribute), false).Length > 0);
+        return methods.Where(m => m.GetCustomAttributes(typeof(EventAttribute), false).Any());
     }
 }

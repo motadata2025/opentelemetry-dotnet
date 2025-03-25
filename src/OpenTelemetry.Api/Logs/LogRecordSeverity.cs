@@ -1,7 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if NET && EXPOSE_EXPERIMENTAL_FEATURES
+#nullable enable
+
+#if NET8_0_OR_GREATER && EXPOSE_EXPERIMENTAL_FEATURES
 using System.Diagnostics.CodeAnalysis;
 using OpenTelemetry.Internal;
 #endif
@@ -13,7 +15,7 @@ namespace OpenTelemetry.Logs;
 /// Describes the severity level of a log record.
 /// </summary>
 /// <remarks><inheritdoc cref="Logger" path="/remarks"/></remarks>
-#if NET
+#if NET8_0_OR_GREATER
 [Experimental(DiagnosticDefinitions.LogsBridgeExperimentalApi, UrlFormat = DiagnosticDefinitions.ExperimentalApiUrlFormat)]
 #endif
 public

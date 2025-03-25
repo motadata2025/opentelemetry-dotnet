@@ -11,8 +11,8 @@ namespace OpenTelemetry.Context.Propagation;
 /// </summary>
 public class CompositeTextMapPropagator : TextMapPropagator
 {
-    private readonly IReadOnlyList<TextMapPropagator> propagators;
-    private readonly ISet<string> allFields;
+    private static readonly ISet<string> EmptyFields = new HashSet<string>();
+    private readonly List<TextMapPropagator> propagators;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CompositeTextMapPropagator"/> class.
@@ -22,55 +22,18 @@ public class CompositeTextMapPropagator : TextMapPropagator
     {
         Guard.ThrowIfNull(propagators);
 
-        var propagatorsList = new List<TextMapPropagator>();
-
-        foreach (var propagator in propagators)
-        {
-            if (propagator is not null)
-            {
-                propagatorsList.Add(propagator);
-            }
-        }
-
-        this.propagators = propagatorsList;
-
-        // For efficiency, we resolve the fields from all propagators only once, as they are
-        // not expected to change (although the implementation doesn't strictly prevent that).
-        if (this.propagators.Count == 0)
-        {
-            // Use a new empty HashSet for each instance to avoid any potential mutation issues.
-            this.allFields = new HashSet<string>();
-        }
-        else
-        {
-            ISet<string>? fields = this.propagators[0].Fields;
-
-            var output = fields is not null
-                ? new HashSet<string>(fields)
-                : [];
-
-            for (int i = 1; i < this.propagators.Count; i++)
-            {
-                fields = this.propagators[i].Fields;
-                if (fields is not null)
-                {
-                    output.UnionWith(fields);
-                }
-            }
-
-            this.allFields = output;
-        }
+        this.propagators = new List<TextMapPropagator>(propagators);
     }
 
     /// <inheritdoc/>
-    public override ISet<string> Fields => this.allFields;
+    public override ISet<string> Fields => EmptyFields;
 
     /// <inheritdoc/>
-    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>?> getter)
+    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>> getter)
     {
-        for (int i = 0; i < this.propagators.Count; i++)
+        foreach (var propagator in this.propagators)
         {
-            context = this.propagators[i].Extract(context, carrier, getter);
+            context = propagator.Extract(context, carrier, getter);
         }
 
         return context;
@@ -79,9 +42,9 @@ public class CompositeTextMapPropagator : TextMapPropagator
     /// <inheritdoc/>
     public override void Inject<T>(PropagationContext context, T carrier, Action<T, string, string> setter)
     {
-        for (int i = 0; i < this.propagators.Count; i++)
+        foreach (var propagator in this.propagators)
         {
-            this.propagators[i].Inject(context, carrier, setter);
+            propagator.Inject(context, carrier, setter);
         }
     }
 }

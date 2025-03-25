@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Net;
 using System.Net.Http.Headers;
 #if NETFRAMEWORK
@@ -8,7 +10,7 @@ using System.Net.Http;
 #endif
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
-using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient.Grpc;
+using Grpc.Core;
 using Xunit;
 
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient.Tests;
@@ -29,10 +31,11 @@ public class OtlpRetryTests
         foreach (var retryAttempt in testCase.RetryAttempts)
         {
             ++attempts;
-            Assert.NotNull(retryAttempt.Response.Status);
-            var statusCode = retryAttempt.Response.Status.Value.StatusCode;
+            var rpcException = retryAttempt.Response.Exception as RpcException;
+            Assert.NotNull(rpcException);
+            var statusCode = rpcException.StatusCode;
             var deadline = retryAttempt.Response.DeadlineUtc;
-            var trailers = retryAttempt.Response.GrpcStatusDetailsHeader;
+            var trailers = rpcException.Trailers;
             var success = OtlpRetry.TryGetGrpcRetryResult(retryAttempt.Response, nextRetryDelayMilliseconds, out var retryResult);
 
             Assert.Equal(retryAttempt.ExpectedSuccess, success);
@@ -45,7 +48,7 @@ public class OtlpRetryTests
 
             if (retryResult.Throttled)
             {
-                Assert.Equal(GrpcStatusDeserializer.TryGetGrpcRetryDelay(retryAttempt.ThrottleDelay), retryResult.RetryDelay);
+                Assert.Equal(retryAttempt.ThrottleDelay, retryResult.RetryDelay);
             }
             else
             {
@@ -130,9 +133,9 @@ public class OtlpRetryTests
             yield return new[] { new GrpcRetryTestCase("Unknown", new GrpcRetryAttempt[] { new(StatusCode.Unknown, expectedSuccess: false) }) };
 
             yield return new[] { new GrpcRetryTestCase("ResourceExhausted w/o RetryInfo", new GrpcRetryAttempt[] { new(StatusCode.ResourceExhausted, expectedSuccess: false) }) };
-            yield return new[] { new GrpcRetryTestCase("ResourceExhausted w/ RetryInfo", new GrpcRetryAttempt[] { new(StatusCode.ResourceExhausted, throttleDelay: GetThrottleDelayString(new Duration { Seconds = 2 }), expectedNextRetryDelayMilliseconds: 3000) }) };
+            yield return new[] { new GrpcRetryTestCase("ResourceExhausted w/ RetryInfo", new GrpcRetryAttempt[] { new(StatusCode.ResourceExhausted, throttleDelay: new Duration { Seconds = 2 }, expectedNextRetryDelayMilliseconds: 3000) }) };
 
-            yield return new[] { new GrpcRetryTestCase("Unavailable w/ RetryInfo", new GrpcRetryAttempt[] { new(StatusCode.Unavailable, throttleDelay: GetThrottleDelayString(Duration.FromTimeSpan(TimeSpan.FromMilliseconds(2000))), expectedNextRetryDelayMilliseconds: 3000) }) };
+            yield return new[] { new GrpcRetryTestCase("Unavailable w/ RetryInfo", new GrpcRetryAttempt[] { new(StatusCode.Unavailable, throttleDelay: Duration.FromTimeSpan(TimeSpan.FromMilliseconds(2000)), expectedNextRetryDelayMilliseconds: 3000) }) };
 
             yield return new[] { new GrpcRetryTestCase("Expired deadline", new GrpcRetryAttempt[] { new(StatusCode.Unavailable, deadlineExceeded: true, expectedSuccess: false) }) };
 
@@ -175,7 +178,7 @@ public class OtlpRetryTests
                     {
                         new(StatusCode.Unavailable, expectedNextRetryDelayMilliseconds: 1500),
                         new(StatusCode.Unavailable, expectedNextRetryDelayMilliseconds: 2250),
-                        new(StatusCode.Unavailable, throttleDelay: GetThrottleDelayString(Duration.FromTimeSpan(TimeSpan.FromMilliseconds(500))), expectedNextRetryDelayMilliseconds: 750),
+                        new(StatusCode.Unavailable, throttleDelay: Duration.FromTimeSpan(TimeSpan.FromMilliseconds(500)), expectedNextRetryDelayMilliseconds: 750),
                         new(StatusCode.Unavailable, expectedNextRetryDelayMilliseconds: 1125),
                         new(StatusCode.Unavailable, expectedNextRetryDelayMilliseconds: 1688),
                         new(StatusCode.Unavailable, expectedNextRetryDelayMilliseconds: 2532),
@@ -192,46 +195,48 @@ public class OtlpRetryTests
             return this.testRunnerName;
         }
 
-        private static string GetThrottleDelayString(Duration throttleDelay)
+        private static Metadata GenerateTrailers(Duration throttleDelay)
         {
-            var status = new Google.Rpc.Status
-            {
-                Code = 4,
-                Message = "Only nanos",
-                Details =
-                {
-                    Any.Pack(new Google.Rpc.RetryInfo
-                    {
-                        RetryDelay = throttleDelay,
-                    }),
-                },
-            };
+            var metadata = new Metadata();
 
-            return Convert.ToBase64String(status.ToByteArray());
+            var retryInfo = new Google.Rpc.RetryInfo();
+            retryInfo.RetryDelay = throttleDelay;
+
+            var status = new Google.Rpc.Status();
+            status.Details.Add(Any.Pack(retryInfo));
+
+            var stream = new MemoryStream();
+            status.WriteTo(stream);
+
+            metadata.Add(OtlpRetry.GrpcStatusDetailsHeader, stream.ToArray());
+            return metadata;
         }
 
         public struct GrpcRetryAttempt
         {
-            public string? ThrottleDelay;
+            public TimeSpan? ThrottleDelay;
             public int? ExpectedNextRetryDelayMilliseconds;
             public bool ExpectedSuccess;
             internal ExportClientGrpcResponse Response;
 
-            internal GrpcRetryAttempt(
+            public GrpcRetryAttempt(
                 StatusCode statusCode,
                 bool deadlineExceeded = false,
-                string? throttleDelay = null,
+                Duration? throttleDelay = null,
                 int expectedNextRetryDelayMilliseconds = 1500,
                 bool expectedSuccess = true)
             {
                 var status = new Status(statusCode, "Error");
+                var rpcException = throttleDelay != null
+                    ? new RpcException(status, GenerateTrailers(throttleDelay))
+                    : new RpcException(status);
 
                 // Using arbitrary +1 hr for deadline for test purposes.
                 var deadlineUtc = deadlineExceeded ? DateTime.UtcNow.AddSeconds(-1) : DateTime.UtcNow.AddHours(1);
 
-                this.ThrottleDelay = throttleDelay;
+                this.ThrottleDelay = throttleDelay != null ? throttleDelay.ToTimeSpan() : null;
 
-                this.Response = new ExportClientGrpcResponse(expectedSuccess, deadlineUtc, null, status, this.ThrottleDelay);
+                this.Response = new ExportClientGrpcResponse(expectedSuccess, deadlineUtc, rpcException);
 
                 this.ExpectedNextRetryDelayMilliseconds = expectedNextRetryDelayMilliseconds;
 
@@ -258,7 +263,7 @@ public class OtlpRetryTests
         {
             yield return new[] { new HttpRetryTestCase("NetworkError", [new(statusCode: null)]) };
             yield return new[] { new HttpRetryTestCase("GatewayTimeout", [new(statusCode: HttpStatusCode.GatewayTimeout, throttleDelay: TimeSpan.FromSeconds(1))]) };
-#if NETSTANDARD2_1_OR_GREATER || NET
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
             yield return new[] { new HttpRetryTestCase("ServiceUnavailable", [new(statusCode: HttpStatusCode.TooManyRequests, throttleDelay: TimeSpan.FromSeconds(1))]) };
 #endif
 

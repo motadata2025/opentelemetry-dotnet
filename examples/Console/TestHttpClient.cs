@@ -15,10 +15,8 @@ internal class TestHttpClient
     // (eg: C:\repos\opentelemetry-dotnet\examples\Console\)
     //
     // dotnet run httpclient
-    internal static int Run(HttpClientOptions options)
+    internal static object Run()
     {
-        Debug.Assert(options != null, "options was null");
-
         System.Console.WriteLine("Hello World!");
 
         using var tracerProvider = Sdk.CreateTracerProviderBuilder()
@@ -38,6 +36,6 @@ internal class TestHttpClient
         System.Console.WriteLine("Press Enter key to exit.");
         System.Console.ReadLine();
 
-        return 0;
+        return null;
     }
 }

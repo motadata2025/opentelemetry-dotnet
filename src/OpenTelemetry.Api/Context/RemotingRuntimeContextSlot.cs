@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #if NETFRAMEWORK
-
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -39,39 +38,25 @@ public class RemotingRuntimeContextSlot<T> : RuntimeContextSlot<T>, IRuntimeCont
     }
 
     /// <inheritdoc/>
-    public object? Value
+    public object Value
     {
         get => this.Get();
-        set
-        {
-            if (typeof(T).IsValueType && value is null)
-            {
-                this.Set(default!);
-            }
-            else
-            {
-                this.Set((T)value!);
-            }
-        }
+        set => this.Set((T)value);
     }
 
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override T? Get()
+    public override T Get()
     {
-        if (CallContext.LogicalGetData(this.Name) is not BitArray wrapper)
+        if (!(CallContext.LogicalGetData(this.Name) is BitArray wrapper))
         {
             return default;
         }
 
         var value = WrapperField.GetValue(wrapper);
-
-        if (typeof(T).IsValueType && value is null)
-        {
-            return default;
-        }
-
-        return (T)value;
+        return value is T t
+            ? t
+            : default;
     }
 
     /// <inheritdoc/>

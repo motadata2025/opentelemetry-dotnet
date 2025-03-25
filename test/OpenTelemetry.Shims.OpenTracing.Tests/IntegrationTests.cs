@@ -55,7 +55,7 @@ public class IntegrationTests
                 b => b.AddSource(ChildActivitySource))
             .Build();
 
-        var otTracer = new TracerShim(
+        ITracer otTracer = new TracerShim(
             tracerProvider,
             Propagators.DefaultTextMapPropagator);
 
@@ -76,7 +76,7 @@ public class IntegrationTests
             }
         }
 
-        var expectedExportedSpans = new string?[]
+        var expectedExportedSpans = new string[]
             {
                 childActivitySamplingDecision == SamplingDecision.RecordAndSample ? ChildActivityName : null,
                 shimSamplingDecision == SamplingDecision.RecordAndSample ? ShimActivityName : null,
@@ -99,7 +99,7 @@ public class IntegrationTests
         }
     }
 
-    private sealed class TestSampler : Sampler
+    private class TestSampler : Sampler
     {
         private readonly Func<SamplingParameters, SamplingDecision> shouldSampleDelegate;
 

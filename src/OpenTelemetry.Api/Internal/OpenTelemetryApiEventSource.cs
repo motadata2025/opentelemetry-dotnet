@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics.Tracing;
 
 namespace OpenTelemetry.Internal;
@@ -12,7 +14,7 @@ namespace OpenTelemetry.Internal;
 [EventSource(Name = "OpenTelemetry-Api")]
 internal sealed class OpenTelemetryApiEventSource : EventSource
 {
-    public static readonly OpenTelemetryApiEventSource Log = new();
+    public static OpenTelemetryApiEventSource Log = new();
 
     [NonEvent]
     public void ActivityContextExtractException(string format, Exception ex)

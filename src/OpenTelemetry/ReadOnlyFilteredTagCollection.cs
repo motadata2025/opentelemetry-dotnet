@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if NET
+#if NET8_0_OR_GREATER
 using System.Collections.Frozen;
 #endif
 using System.Diagnostics;
@@ -16,15 +16,16 @@ namespace OpenTelemetry;
 // prevent accidental boxing.
 public readonly struct ReadOnlyFilteredTagCollection
 {
-#if NET
+#if NET8_0_OR_GREATER
     private readonly FrozenSet<string>? excludedKeys;
 #else
     private readonly HashSet<string>? excludedKeys;
 #endif
     private readonly KeyValuePair<string, object?>[] tags;
+    private readonly int count;
 
     internal ReadOnlyFilteredTagCollection(
-#if NET
+#if NET8_0_OR_GREATER
         FrozenSet<string>? excludedKeys,
 #else
         HashSet<string>? excludedKeys,
@@ -37,7 +38,7 @@ public readonly struct ReadOnlyFilteredTagCollection
 
         this.excludedKeys = excludedKeys;
         this.tags = tags;
-        this.MaximumCount = count;
+        this.count = count;
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ public readonly struct ReadOnlyFilteredTagCollection
     /// Note: Enumerating the collection may return fewer results depending on
     /// the filter.
     /// </remarks>
-    internal int MaximumCount { get; }
+    internal int MaximumCount => this.count;
 
     /// <summary>
     /// Returns an enumerator that iterates through the tags.

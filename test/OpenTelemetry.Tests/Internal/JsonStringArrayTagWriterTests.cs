@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Text;
 using Xunit;
 
@@ -191,11 +193,6 @@ public class JsonStringArrayTagWriterTests
 
         protected override void OnUnsupportedTagDropped(string tagKey, string tagValueTypeFullName)
         {
-        }
-
-        protected override bool TryWriteEmptyTag(ref Tag state, string key, object? value)
-        {
-            throw new NotImplementedException();
         }
 
         public struct Tag

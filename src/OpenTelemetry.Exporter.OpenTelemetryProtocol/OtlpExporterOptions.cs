@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics;
 #if NETFRAMEWORK
 using System.Net.Http;
@@ -30,7 +32,7 @@ public class OtlpExporterOptions : IOtlpExporterOptions
 
     internal static readonly KeyValuePair<string, string>[] StandardHeaders = new KeyValuePair<string, string>[]
     {
-        new("User-Agent", GetUserAgentString()),
+        new KeyValuePair<string, string>("User-Agent", GetUserAgentString()),
     };
 
     internal readonly Func<HttpClient> DefaultHttpClientFactory;

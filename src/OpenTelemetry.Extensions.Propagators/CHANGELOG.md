@@ -1,38 +1,6 @@
 # Changelog
 
-This file contains individual changes for the
-OpenTelemetry.Extensions.Propagators package. For highlights and announcements
-covering all components see: [Release Notes](../../RELEASENOTES.md).
-
 ## Unreleased
-
-## 1.11.2
-
-Released 2025-Mar-04
-
-## 1.11.1
-
-Released 2025-Jan-22
-
-## 1.11.0
-
-Released 2025-Jan-15
-
-## 1.11.0-rc.1
-
-Released 2024-Dec-11
-
-## 1.10.0
-
-Released 2024-Nov-12
-
-## 1.10.0-rc.1
-
-Released 2024-Nov-01
-
-## 1.10.0-beta.1
-
-Released 2024-Sep-30
 
 ## 1.9.0
 

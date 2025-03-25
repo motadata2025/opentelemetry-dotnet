@@ -13,7 +13,7 @@ public static class Program
         return StressTestFactory.RunSynchronously<TracesStressTest>(args);
     }
 
-    private sealed class TracesStressTest : StressTests<StressTestOptions>
+    private sealed class TracesStressTest : StressTest<StressTestOptions>
     {
         private static readonly ActivitySource ActivitySource = new("OpenTelemetry.Tests.Stress");
         private readonly TracerProvider tracerProvider;
@@ -26,14 +26,21 @@ public static class Program
                 .Build();
         }
 
-        public override void Dispose() =>
-            this.tracerProvider.Dispose();
-
         protected override void RunWorkItemInParallel()
         {
             using var activity = ActivitySource.StartActivity("test");
 
             activity?.SetTag("foo", "value");
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+            {
+                this.tracerProvider.Dispose();
+            }
+
+            base.Dispose(isDisposing);
         }
     }
 }

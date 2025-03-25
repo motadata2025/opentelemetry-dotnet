@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics;
-#if NET
+#if NET6_0_OR_GREATER
 using System.Numerics;
 #endif
 using System.Runtime.CompilerServices;
@@ -12,8 +12,8 @@ namespace OpenTelemetry.Internal;
 internal static class MathHelper
 {
     // https://en.wikipedia.org/wiki/Leading_zero
-    private static readonly byte[] LeadingZeroLookupTable =
-    [
+    private static readonly byte[] LeadingZeroLookupTable = new byte[]
+    {
         8, 7, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4,
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
         2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -29,8 +29,8 @@ internal static class MathHelper
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-    ];
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int LeadingZero8(byte value)
@@ -73,7 +73,7 @@ internal static class MathHelper
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int LeadingZero64(long value)
     {
-#if NET
+#if NET6_0_OR_GREATER
         return BitOperations.LeadingZeroCount((ulong)value);
 #else
         unchecked
@@ -123,7 +123,7 @@ internal static class MathHelper
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsFinite(double value)
     {
-#if NET
+#if NET6_0_OR_GREATER
         return double.IsFinite(value);
 #else
         return !double.IsInfinity(value) && !double.IsNaN(value);

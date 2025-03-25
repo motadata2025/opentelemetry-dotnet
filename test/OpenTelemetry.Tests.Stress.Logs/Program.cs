@@ -12,7 +12,7 @@ public static class Program
         return StressTestFactory.RunSynchronously<LogsStressTest>(args);
     }
 
-    private sealed class LogsStressTest : StressTests<StressTestOptions>
+    private sealed class LogsStressTest : StressTest<StressTestOptions>
     {
         private static readonly Payload Payload = new();
         private readonly ILoggerFactory loggerFactory;
@@ -32,20 +32,24 @@ public static class Program
             this.logger = this.loggerFactory.CreateLogger<LogsStressTest>();
         }
 
-        public override void Dispose()
-        {
-            this.loggerFactory.Dispose();
-            base.Dispose();
-        }
-
         protected override void RunWorkItemInParallel()
         {
-            this.logger.FoodRecallNotice(
-                brandName: "Contoso",
-                productDescription: "Salads",
-                productType: "Food & Beverages",
-                recallReasonDescription: "due to a possible health risk from Listeria monocytogenes",
-                companyName: "Contoso Fresh Vegetables, Inc.");
+            this.logger.Log(
+                logLevel: LogLevel.Information,
+                eventId: 2,
+                state: Payload,
+                exception: null,
+                formatter: (state, ex) => string.Empty);
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+            {
+                this.loggerFactory.Dispose();
+            }
+
+            base.Dispose(isDisposing);
         }
     }
 }

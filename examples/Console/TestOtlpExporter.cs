@@ -10,7 +10,7 @@ namespace Examples.Console;
 
 internal static class TestOtlpExporter
 {
-    internal static int Run(OtlpOptions options)
+    internal static object Run(string endpoint, string protocol)
     {
         /*
          * Prerequisite to run this example:
@@ -36,36 +36,36 @@ internal static class TestOtlpExporter
          * For more information about the OpenTelemetry Collector go to https://github.com/open-telemetry/opentelemetry-collector
          *
          */
-        return RunWithActivitySource(options);
+        return RunWithActivitySource(endpoint, protocol);
     }
 
-    private static int RunWithActivitySource(OtlpOptions options)
+    private static object RunWithActivitySource(string endpoint, string protocol)
     {
-        var otlpExportProtocol = ToOtlpExportProtocol(options.Protocol);
+        var otlpExportProtocol = ToOtlpExportProtocol(protocol);
         if (!otlpExportProtocol.HasValue)
         {
-            System.Console.WriteLine($"Export protocol {options.Protocol} is not supported. Default protocol 'grpc' will be used.");
+            System.Console.WriteLine($"Export protocol {protocol} is not supported. Default protocol 'grpc' will be used.");
             otlpExportProtocol = OtlpExportProtocol.Grpc;
         }
 
         // Enable OpenTelemetry for the sources "Samples.SampleServer" and "Samples.SampleClient"
         // and use OTLP exporter.
         using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource("Samples.SampleClient", "Samples.SampleServer")
-            .ConfigureResource(r => r.AddService("otlp-test"))
-            .AddOtlpExporter(opt =>
-            {
-                // If endpoint was not specified, the proper one will be selected according to the protocol.
-                if (!string.IsNullOrEmpty(options.Endpoint))
+                .AddSource("Samples.SampleClient", "Samples.SampleServer")
+                .ConfigureResource(r => r.AddService("otlp-test"))
+                .AddOtlpExporter(opt =>
                 {
-                    opt.Endpoint = new Uri(options.Endpoint);
-                }
+                    // If endpoint was not specified, the proper one will be selected according to the protocol.
+                    if (!string.IsNullOrEmpty(endpoint))
+                    {
+                        opt.Endpoint = new Uri(endpoint);
+                    }
 
-                opt.Protocol = otlpExportProtocol.Value;
+                    opt.Protocol = otlpExportProtocol.Value;
 
-                System.Console.WriteLine($"OTLP Exporter is using {opt.Protocol} protocol and endpoint {opt.Endpoint}");
-            })
-            .Build();
+                    System.Console.WriteLine($"OTLP Exporter is using {opt.Protocol} protocol and endpoint {opt.Endpoint}");
+                })
+                .Build();
 
         // The above line is required only in Applications
         // which decide to use OpenTelemetry.
@@ -79,11 +79,11 @@ internal static class TestOtlpExporter
             System.Console.ReadLine();
         }
 
-        return 0;
+        return null;
     }
 
-    private static OtlpExportProtocol? ToOtlpExportProtocol(string? protocol) =>
-        protocol?.Trim().ToLower() switch
+    private static OtlpExportProtocol? ToOtlpExportProtocol(string protocol) =>
+        protocol.Trim().ToLower() switch
         {
             "grpc" => OtlpExportProtocol.Grpc,
             "http/protobuf" => OtlpExportProtocol.HttpProtobuf,

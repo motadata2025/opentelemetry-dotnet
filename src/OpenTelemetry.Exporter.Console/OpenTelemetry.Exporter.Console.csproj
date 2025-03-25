@@ -5,12 +5,19 @@
     <Description>Console exporter for OpenTelemetry .NET</Description>
     <PackageTags>$(PackageTags);Console;distributed-tracing</PackageTags>
     <MinVerTagPrefix>core-</MinVerTagPrefix>
-    <ReferenceSystemTextJsonPackages>true</ReferenceSystemTextJsonPackages>
+
+    <!-- this is temporary. will remove in future PR. -->
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>
-    <NoWarn>$(NoWarn),CS1591</NoWarn>
+    <NoWarn>$(NoWarn),1591</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == '$(NetFrameworkMinimumSupportedVersion)'">
+    <PackageReference Include="System.Text.Encodings.Web" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(RepoRoot)\src\OpenTelemetry\OpenTelemetry.csproj" />

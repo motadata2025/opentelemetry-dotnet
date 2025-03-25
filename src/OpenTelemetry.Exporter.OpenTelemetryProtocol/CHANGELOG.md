@@ -1,101 +1,6 @@
 # Changelog
 
-This file contains individual changes for the
-OpenTelemetry.Exporter.OpenTelemetryProtocol package. For highlights and
-announcements covering all components see: [Release
-Notes](../../RELEASENOTES.md).
-
 ## Unreleased
-
-## 1.11.2
-
-Released 2025-Mar-04
-
-* Fixed a bug in .NET Framework gRPC export client where the default success
-  export response was incorrectly marked as false, now changed to true, ensuring
-  exports are correctly marked as successful.
-  ([#6099](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6099))
-
-* Fixed an issues causing trace exports to fail when
-  `Activity.StatusDescription` exceeds 127 bytes.
-  ([#6119](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6119))
-
-* Fixed incorrect log serialization of attributes with null values, causing
-  some backends to reject logs.
-  ([#6149](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6149))
-
-## 1.11.1
-
-Released 2025-Jan-22
-
-* Fixed an issue where the OTLP gRPC exporter did not export logs, metrics, or
-  traces in .NET Framework projects.
-  ([#6083](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6083))
-
-## 1.11.0
-
-Released 2025-Jan-15
-
-## 1.11.0-rc.1
-
-Released 2024-Dec-11
-
-* Removed the following package references:
-
-  * `Google.Protobuf`
-  * `Grpc`
-  * `Grpc.Net.Client`
-
-  These changes were made to streamline dependencies and reduce the footprint of
-  the exporter.
-  ([#6005](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6005))
-
-* Switched from using the `Google.Protobuf` library for serialization to a
-  custom manual implementation of protobuf serialization.
-  ([#6005](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6005))
-
-* Fixed an issue where a `service.name` was added to the resource if it was
-  missing. The exporter now respects the resource data provided by the SDK
-  without modifications.
-  ([#6015](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6015))
-
-* Removed the peer service resolver, which was based on earlier experimental
-  semantic conventions that are not part of the stable specification. This
-  change ensures that the exporter no longer modifies or assumes the value of
-  peer service attributes, aligning it more closely with OpenTelemetry protocol
-  specifications.
-  ([#6005](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6005))
-
-## 1.10.0
-
-Released 2024-Nov-12
-
-## 1.10.0-rc.1
-
-Released 2024-Nov-01
-
-* Added support for exporting instrumentation scope attributes from
-  `ActivitySource.Tags`.
-  ([#5897](https://github.com/open-telemetry/opentelemetry-dotnet/pull/5897))
-
-## 1.10.0-beta.1
-
-Released 2024-Sep-30
-
-* **Breaking change**: Non-primitive attribute (logs) and tag (traces) values
-  converted using `Convert.ToString` will now format using
-  `CultureInfo.InvariantCulture`.
-  ([#5700](https://github.com/open-telemetry/opentelemetry-dotnet/pull/5700))
-
-* Fixed an issue causing `NotSupportedException`s to be thrown on startup when
-  `AddOtlpExporter` registration extensions are called while using custom
-  dependency injection containers which automatically create services (Unity,
-  Grace, etc.).
-  ([#5808](https://github.com/open-telemetry/opentelemetry-dotnet/pull/5808))
-
-  * Fixed `PlatformNotSupportedException`s being thrown during export when running
-  on mobile platforms which caused telemetry to be dropped silently.
-  ([#5821](https://github.com/open-telemetry/opentelemetry-dotnet-contrib/pull/5821))
 
 ## 1.9.0
 
@@ -106,8 +11,8 @@ Released 2024-Jun-14
 Released 2024-Jun-07
 
 * The experimental APIs previously covered by `OTEL1000`
-  (`LoggerProviderBuilder.AddOtlpExporter` extension) are now part of the public
-  API and supported in stable builds.
+  (`LoggerProviderBuilder.AddOtlpExporter` extension) will now be part of the
+  public API and supported in stable builds.
   ([#5648](https://github.com/open-telemetry/opentelemetry-dotnet/pull/5648))
 
 ## 1.9.0-alpha.1
