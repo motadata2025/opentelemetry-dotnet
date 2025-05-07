@@ -13,19 +13,20 @@ using OpenTelemetryProtocol::OpenTelemetry.Exporter;
 using OpenTelemetryProtocol::OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
 using OpenTelemetryProtocol::OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient;
 using OpenTelemetryProtocol::OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Transmission;
-using OpenTelemetryProtocol::OpenTelemetry.Proto.Collector.Trace.V1;
 
 namespace Benchmarks.Exporter;
 
+#pragma warning disable CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 public class OtlpHttpExporterBenchmarks
+#pragma warning restore CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 {
     private readonly byte[] buffer = new byte[1024 * 1024];
-    private IDisposable server;
-    private string serverHost;
+    private IDisposable? server;
+    private string? serverHost;
     private int serverPort;
-    private OtlpTraceExporter exporter;
-    private Activity activity;
-    private CircularBuffer<Activity> activityBatch;
+    private OtlpTraceExporter? exporter;
+    private Activity? activity;
+    private CircularBuffer<Activity>? activityBatch;
 
     [Params(1, 10, 100)]
     public int NumberOfBatches { get; set; }
@@ -64,7 +65,9 @@ public class OtlpHttpExporterBenchmarks
             options,
             new SdkLimitOptions(),
             new ExperimentalOptions(),
-            new OtlpExporterTransmissionHandler<ExportTraceServiceRequest>(new OtlpHttpTraceExportClient(options, options.HttpClientFactory()), options.TimeoutMilliseconds));
+#pragma warning disable CA2000 // Dispose objects before losing scope
+            new OtlpExporterTransmissionHandler(new OtlpHttpExportClient(options, options.HttpClientFactory(), "v1/traces"), options.TimeoutMilliseconds));
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         this.activity = ActivityHelper.CreateTestActivity();
         this.activityBatch = new CircularBuffer<Activity>(this.NumberOfSpans);
@@ -73,9 +76,10 @@ public class OtlpHttpExporterBenchmarks
     [GlobalCleanup]
     public void GlobalCleanup()
     {
-        this.exporter.Shutdown();
-        this.exporter.Dispose();
-        this.server.Dispose();
+        this.activity?.Dispose();
+        this.exporter?.Shutdown();
+        this.exporter?.Dispose();
+        this.server?.Dispose();
     }
 
     [Benchmark]
@@ -85,10 +89,10 @@ public class OtlpHttpExporterBenchmarks
         {
             for (int c = 0; c < this.NumberOfSpans; c++)
             {
-                this.activityBatch.Add(this.activity);
+                this.activityBatch!.Add(this.activity!);
             }
 
-            this.exporter.Export(new Batch<Activity>(this.activityBatch, this.NumberOfSpans));
+            this.exporter!.Export(new Batch<Activity>(this.activityBatch!, this.NumberOfSpans));
         }
     }
 }

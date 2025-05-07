@@ -16,6 +16,12 @@ public class TraceContextPropagator : TextMapPropagator
     private const string TraceParent = "traceparent";
     private const string TraceState = "tracestate";
 
+    // The following length limits are from Trace Context v1 https://www.w3.org/TR/trace-context-1/#key
+    private const int TraceStateKeyMaxLength = 256;
+    private const int TraceStateKeyTenantMaxLength = 241;
+    private const int TraceStateKeyVendorMaxLength = 14;
+    private const int TraceStateValueMaxLength = 256;
+
     private static readonly int VersionPrefixIdLength = "00-".Length;
     private static readonly int TraceIdLength = "0af7651916cd43dd8448eb211c80319c".Length;
     private static readonly int VersionAndTraceIdLength = "00-0af7651916cd43dd8448eb211c80319c-".Length;
@@ -24,17 +30,11 @@ public class TraceContextPropagator : TextMapPropagator
     private static readonly int OptionsLength = "00".Length;
     private static readonly int TraceparentLengthV0 = "00-0af7651916cd43dd8448eb211c80319c-00f067aa0ba902b7-00".Length;
 
-    // The following length limits are from Trace Context v1 https://www.w3.org/TR/trace-context-1/#key
-    private static readonly int TraceStateKeyMaxLength = 256;
-    private static readonly int TraceStateKeyTenantMaxLength = 241;
-    private static readonly int TraceStateKeyVendorMaxLength = 14;
-    private static readonly int TraceStateValueMaxLength = 256;
-
     /// <inheritdoc/>
     public override ISet<string> Fields => new HashSet<string> { TraceState, TraceParent };
 
     /// <inheritdoc/>
-    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>> getter)
+    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>?> getter)
     {
         if (context.ActivityContext.IsValid())
         {
@@ -72,11 +72,11 @@ public class TraceContextPropagator : TextMapPropagator
                 return context;
             }
 
-            string tracestate = null;
+            string? tracestate = null;
             var tracestateCollection = getter(carrier, TraceState);
             if (tracestateCollection?.Any() ?? false)
             {
-                TryExtractTracestate(tracestateCollection.ToArray(), out tracestate);
+                TryExtractTracestate([.. tracestateCollection], out tracestate);
             }
 
             return new PropagationContext(
@@ -113,7 +113,7 @@ public class TraceContextPropagator : TextMapPropagator
             return;
         }
 
-#if NET6_0_OR_GREATER
+#if NET
         var traceparent = string.Create(55, context.ActivityContext, WriteTraceParentIntoSpan);
 #else
         var traceparent = string.Concat("00-", context.ActivityContext.TraceId.ToHexString(), "-", context.ActivityContext.SpanId.ToHexString());
@@ -122,7 +122,7 @@ public class TraceContextPropagator : TextMapPropagator
 
         setter(carrier, TraceParent, traceparent);
 
-        string tracestateStr = context.ActivityContext.TraceState;
+        string? tracestateStr = context.ActivityContext.TraceState;
         if (tracestateStr?.Length > 0)
         {
             setter(carrier, TraceState, tracestateStr);
@@ -297,7 +297,11 @@ public class TraceContextPropagator : TextMapPropagator
                         result.Append(',');
                     }
 
+#if NET
+                    result.Append(listMember);
+#else
                     result.Append(listMember.ToString());
+#endif
                 }
             }
 
@@ -430,7 +434,7 @@ public class TraceContextPropagator : TextMapPropagator
         return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z');
     }
 
-#if NET6_0_OR_GREATER
+#if NET
     private static void WriteTraceParentIntoSpan(Span<char> destination, ActivityContext context)
     {
         "00-".CopyTo(destination);

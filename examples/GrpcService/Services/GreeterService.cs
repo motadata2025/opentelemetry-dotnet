@@ -5,15 +5,10 @@ using Grpc.Core;
 
 namespace Examples.GrpcService;
 
-public class GreeterService : Greeter.GreeterBase
+#pragma warning disable CA1812 // Avoid uninstantiated internal classes
+internal sealed class GreeterService : Greeter.GreeterBase
+#pragma warning restore CA1812 // Avoid uninstantiated internal classes
 {
-    private readonly ILogger<GreeterService> logger;
-
-    public GreeterService(ILogger<GreeterService> logger)
-    {
-        this.logger = logger;
-    }
-
     public override Task<HelloReply> SayHello(HelloRequest request, ServerCallContext context)
     {
         return Task.FromResult(new HelloReply

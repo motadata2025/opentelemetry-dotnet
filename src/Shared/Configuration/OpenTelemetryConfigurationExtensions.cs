@@ -1,12 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 using System.Diagnostics;
-#if !NETFRAMEWORK && !NETSTANDARD2_0
 using System.Diagnostics.CodeAnalysis;
-#endif
 using System.Globalization;
 
 namespace Microsoft.Extensions.Configuration;
@@ -15,17 +11,13 @@ internal static class OpenTelemetryConfigurationExtensions
 {
     public delegate bool TryParseFunc<T>(
         string value,
-#if !NETFRAMEWORK && !NETSTANDARD2_0
         [NotNullWhen(true)]
-#endif
         out T? parsedValue);
 
     public static bool TryGetStringValue(
         this IConfiguration configuration,
         string key,
-#if !NETFRAMEWORK && !NETSTANDARD2_0
         [NotNullWhen(true)]
-#endif
         out string? value)
     {
         Debug.Assert(configuration != null, "configuration was null");
@@ -39,9 +31,7 @@ internal static class OpenTelemetryConfigurationExtensions
         this IConfiguration configuration,
         IConfigurationExtensionsLogger logger,
         string key,
-#if !NETFRAMEWORK && !NETSTANDARD2_0
         [NotNullWhen(true)]
-#endif
         out Uri? value)
     {
         Debug.Assert(logger != null, "logger was null");
@@ -54,7 +44,7 @@ internal static class OpenTelemetryConfigurationExtensions
 
         if (!Uri.TryCreate(stringValue, UriKind.Absolute, out value))
         {
-            logger!.LogInvalidConfigurationValue(key, stringValue!);
+            logger!.LogInvalidConfigurationValue(key, stringValue);
             return false;
         }
 
@@ -77,7 +67,7 @@ internal static class OpenTelemetryConfigurationExtensions
 
         if (!int.TryParse(stringValue, NumberStyles.None, CultureInfo.InvariantCulture, out value))
         {
-            logger!.LogInvalidConfigurationValue(key, stringValue!);
+            logger!.LogInvalidConfigurationValue(key, stringValue);
             return false;
         }
 
@@ -100,7 +90,7 @@ internal static class OpenTelemetryConfigurationExtensions
 
         if (!bool.TryParse(stringValue, out value))
         {
-            logger!.LogInvalidConfigurationValue(key, stringValue!);
+            logger!.LogInvalidConfigurationValue(key, stringValue);
             return false;
         }
 
@@ -112,9 +102,7 @@ internal static class OpenTelemetryConfigurationExtensions
         IConfigurationExtensionsLogger logger,
         string key,
         TryParseFunc<T> tryParseFunc,
-#if !NETFRAMEWORK && !NETSTANDARD2_0
         [NotNullWhen(true)]
-#endif
         out T? value)
     {
         Debug.Assert(logger != null, "logger was null");
@@ -125,9 +113,9 @@ internal static class OpenTelemetryConfigurationExtensions
             return false;
         }
 
-        if (!tryParseFunc(stringValue!, out value))
+        if (!tryParseFunc(stringValue, out value))
         {
-            logger!.LogInvalidConfigurationValue(key, stringValue!);
+            logger!.LogInvalidConfigurationValue(key, stringValue);
             return false;
         }
 

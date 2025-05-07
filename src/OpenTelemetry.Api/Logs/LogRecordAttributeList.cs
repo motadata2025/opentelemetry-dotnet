@@ -1,12 +1,10 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
-#if NET8_0_OR_GREATER && EXPOSE_EXPERIMENTAL_FEATURES
+#if NET && EXPOSE_EXPERIMENTAL_FEATURES
 using System.Diagnostics.CodeAnalysis;
 #endif
 using OpenTelemetry.Internal;
@@ -19,7 +17,7 @@ namespace OpenTelemetry.Logs;
 /// Stores attributes to be added to a log message.
 /// </summary>
 /// <remarks><inheritdoc cref="Logger" path="/remarks"/></remarks>
-#if NET8_0_OR_GREATER
+#if NET
 [Experimental(DiagnosticDefinitions.LogsBridgeExperimentalApi, UrlFormat = DiagnosticDefinitions.ExperimentalApiUrlFormat)]
 #endif
 public
@@ -29,12 +27,14 @@ public
 /// </summary>
 internal
 #endif
+#pragma warning disable CA1815 // Override equals and operator equals on value types
     struct LogRecordAttributeList : IReadOnlyList<KeyValuePair<string, object?>>
+#pragma warning restore CA1815 // Override equals and operator equals on value types
 {
     internal const int OverflowMaxCount = 8;
     internal const int OverflowAdditionalCapacity = 16;
     internal List<KeyValuePair<string, object?>>? OverflowAttributes;
-    private static readonly IReadOnlyList<KeyValuePair<string, object?>> Empty = Array.Empty<KeyValuePair<string, object?>>();
+    private static readonly IReadOnlyList<KeyValuePair<string, object?>> Empty = [];
     private KeyValuePair<string, object?> attribute1;
     private KeyValuePair<string, object?> attribute2;
     private KeyValuePair<string, object?> attribute3;
@@ -115,7 +115,9 @@ internal
     /// <param name="key">Attribute name.</param>
     /// <returns>Attribute value.</returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
+#pragma warning disable CA1044 // Properties should not be write only
     public object? this[string key]
+#pragma warning restore CA1044 // Properties should not be write only
     {
         // Note: This only exists to enable collection initializer syntax
         // like { ["key"] = value }.
@@ -132,7 +134,7 @@ internal
         Guard.ThrowIfNull(attributes);
 
         LogRecordAttributeList logRecordAttributes = default;
-        logRecordAttributes.OverflowAttributes = new(attributes);
+        logRecordAttributes.OverflowAttributes = [.. attributes];
         logRecordAttributes.count = logRecordAttributes.OverflowAttributes.Count;
         return logRecordAttributes;
     }
@@ -212,8 +214,8 @@ internal
 
     internal readonly IReadOnlyList<KeyValuePair<string, object?>> Export(ref List<KeyValuePair<string, object?>>? attributeStorage)
     {
-        int count = this.count;
-        if (count <= 0)
+        int readonlyCount = this.count;
+        if (readonlyCount <= 0)
         {
             return Empty;
         }
@@ -225,57 +227,54 @@ internal
             return overflowAttributes;
         }
 
-        Debug.Assert(count <= 8, "Invalid size detected.");
+        Debug.Assert(readonlyCount <= 8, "Invalid size detected.");
 
         attributeStorage ??= new List<KeyValuePair<string, object?>>(OverflowAdditionalCapacity);
 
         // TODO: Perf test this, adjust as needed.
-        if (count > 0)
+        attributeStorage.Add(this.attribute1);
+        if (readonlyCount == 1)
         {
-            attributeStorage.Add(this.attribute1);
-            if (count == 1)
-            {
-                return attributeStorage;
-            }
-
-            attributeStorage.Add(this.attribute2);
-            if (count == 2)
-            {
-                return attributeStorage;
-            }
-
-            attributeStorage.Add(this.attribute3);
-            if (count == 3)
-            {
-                return attributeStorage;
-            }
-
-            attributeStorage.Add(this.attribute4);
-            if (count == 4)
-            {
-                return attributeStorage;
-            }
-
-            attributeStorage.Add(this.attribute5);
-            if (count == 5)
-            {
-                return attributeStorage;
-            }
-
-            attributeStorage.Add(this.attribute6);
-            if (count == 6)
-            {
-                return attributeStorage;
-            }
-
-            attributeStorage.Add(this.attribute7);
-            if (count == 7)
-            {
-                return attributeStorage;
-            }
-
-            attributeStorage.Add(this.attribute8);
+            return attributeStorage;
         }
+
+        attributeStorage.Add(this.attribute2);
+        if (readonlyCount == 2)
+        {
+            return attributeStorage;
+        }
+
+        attributeStorage.Add(this.attribute3);
+        if (readonlyCount == 3)
+        {
+            return attributeStorage;
+        }
+
+        attributeStorage.Add(this.attribute4);
+        if (readonlyCount == 4)
+        {
+            return attributeStorage;
+        }
+
+        attributeStorage.Add(this.attribute5);
+        if (readonlyCount == 5)
+        {
+            return attributeStorage;
+        }
+
+        attributeStorage.Add(this.attribute6);
+        if (readonlyCount == 6)
+        {
+            return attributeStorage;
+        }
+
+        attributeStorage.Add(this.attribute7);
+        if (readonlyCount == 7)
+        {
+            return attributeStorage;
+        }
+
+        attributeStorage.Add(this.attribute8);
 
         return attributeStorage;
     }

@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 using Microsoft.Extensions.Configuration;
 
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
@@ -31,7 +29,7 @@ internal sealed class ExperimentalOptions
             this.EmitLogEventAttributes = emitLogEventAttributes;
         }
 
-        if (configuration.TryGetStringValue(OtlpRetryEnvVar, out var retryPolicy) && retryPolicy != null)
+        if (configuration.TryGetStringValue(OtlpRetryEnvVar, out var retryPolicy))
         {
             if (retryPolicy.Equals("in_memory", StringComparison.OrdinalIgnoreCase))
             {
@@ -40,7 +38,7 @@ internal sealed class ExperimentalOptions
             else if (retryPolicy.Equals("disk", StringComparison.OrdinalIgnoreCase))
             {
                 this.EnableDiskRetry = true;
-                if (configuration.TryGetStringValue(OtlpDiskRetryDirectoryPathEnvVar, out var path) && path != null)
+                if (configuration.TryGetStringValue(OtlpDiskRetryDirectoryPathEnvVar, out var path))
                 {
                     this.DiskRetryDirectoryPath = path;
                 }

@@ -6,14 +6,16 @@ using OpenTelemetry.Trace;
 
 namespace OpenTelemetry.Tests.Stress;
 
-public static class Program
+internal static class Program
 {
     public static int Main(string[] args)
     {
         return StressTestFactory.RunSynchronously<TracesStressTest>(args);
     }
 
-    private sealed class TracesStressTest : StressTest<StressTestOptions>
+#pragma warning disable CA1812 // Avoid uninstantiated internal classes
+    private sealed class TracesStressTest : StressTests<StressTestOptions>
+#pragma warning restore CA1812 // Avoid uninstantiated internal classes
     {
         private static readonly ActivitySource ActivitySource = new("OpenTelemetry.Tests.Stress");
         private readonly TracerProvider tracerProvider;
@@ -26,21 +28,21 @@ public static class Program
                 .Build();
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.tracerProvider.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
         protected override void RunWorkItemInParallel()
         {
             using var activity = ActivitySource.StartActivity("test");
 
             activity?.SetTag("foo", "value");
-        }
-
-        protected override void Dispose(bool isDisposing)
-        {
-            if (isDisposing)
-            {
-                this.tracerProvider.Dispose();
-            }
-
-            base.Dispose(isDisposing);
         }
     }
 }

@@ -37,13 +37,13 @@ public static class PrometheusHttpListenerMeterProviderBuilderExtensions
     /// Adds PrometheusHttpListener to MeterProviderBuilder.
     /// </summary>
     /// <param name="builder"><see cref="MeterProviderBuilder"/>builder to use.</param>
-    /// <param name="name">Name which is used when retrieving options.</param>
-    /// <param name="configure">Callback action for configuring <see cref="PrometheusHttpListenerOptions"/>.</param>
+    /// <param name="name">Optional name which is used when retrieving options.</param>
+    /// <param name="configure">Optional callback action for configuring <see cref="PrometheusHttpListenerOptions"/>.</param>
     /// <returns>The instance of <see cref="MeterProviderBuilder"/>to chain calls.</returns>
     public static MeterProviderBuilder AddPrometheusHttpListener(
         this MeterProviderBuilder builder,
-        string name,
-        Action<PrometheusHttpListenerOptions> configure)
+        string? name,
+        Action<PrometheusHttpListenerOptions>? configure)
     {
         Guard.ThrowIfNull(builder);
 
@@ -62,7 +62,7 @@ public static class PrometheusHttpListenerMeterProviderBuilderExtensions
         });
     }
 
-    private static MetricReader BuildPrometheusHttpListenerMetricReader(
+    private static BaseExportingMetricReader BuildPrometheusHttpListenerMetricReader(
         PrometheusHttpListenerOptions options)
     {
         var exporter = new PrometheusExporter(new PrometheusExporterOptions
@@ -78,8 +78,10 @@ public static class PrometheusHttpListenerMeterProviderBuilderExtensions
 
         try
         {
+#pragma warning disable CA2000 // Dispose objects before losing scope
             var listener = new PrometheusHttpListener(exporter, options);
-            exporter.OnDispose = () => listener.Dispose();
+#pragma warning restore CA2000 // Dispose objects before losing scope
+            exporter.OnDispose = listener.Dispose;
             listener.Start();
         }
         catch (Exception ex)

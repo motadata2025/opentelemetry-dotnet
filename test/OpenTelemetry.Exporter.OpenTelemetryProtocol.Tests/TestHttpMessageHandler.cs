@@ -1,26 +1,30 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if !NET6_0_OR_GREATER
+#if !NET
 using System.Net.Http;
 #endif
 
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol.Tests;
 
-internal class TestHttpMessageHandler : HttpMessageHandler
+internal sealed class TestHttpMessageHandler : HttpMessageHandler
 {
-    public HttpRequestMessage HttpRequestMessage { get; private set; }
+    public HttpRequestMessage? HttpRequestMessage { get; private set; }
 
-    public byte[] HttpRequestContent { get; private set; }
+    public byte[]? HttpRequestContent { get; private set; }
 
-    public virtual HttpResponseMessage InternalSend(HttpRequestMessage request, CancellationToken cancellationToken)
+    public HttpResponseMessage InternalSend(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         this.HttpRequestMessage = request;
-        this.HttpRequestContent = request.Content.ReadAsByteArrayAsync().Result;
+#if NET
+        this.HttpRequestContent = request.Content!.ReadAsByteArrayAsync(cancellationToken).Result;
+#else
+        this.HttpRequestContent = request.Content!.ReadAsByteArrayAsync().Result;
+#endif
         return new HttpResponseMessage();
     }
 
-#if NET6_0_OR_GREATER
+#if NET
     protected override HttpResponseMessage Send(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         return this.InternalSend(request, cancellationToken);

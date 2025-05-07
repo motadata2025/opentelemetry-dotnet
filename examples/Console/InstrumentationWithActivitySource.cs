@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Examples.Console;
 
-internal class InstrumentationWithActivitySource : IDisposable
+internal sealed class InstrumentationWithActivitySource : IDisposable
 {
     private const string RequestPath = "/api/request";
     private readonly SampleServer server = new();
@@ -27,7 +27,7 @@ internal class InstrumentationWithActivitySource : IDisposable
         this.server.Dispose();
     }
 
-    private class SampleServer : IDisposable
+    private sealed class SampleServer : IDisposable
     {
         private readonly HttpListener listener = new();
 
@@ -47,13 +47,13 @@ internal class InstrumentationWithActivitySource : IDisposable
                         var context = this.listener.GetContext();
 
                         using var activity = source.StartActivity(
-                            $"{context.Request.HttpMethod}:{context.Request.Url.AbsolutePath}",
+                            $"{context.Request.HttpMethod}:{context.Request.Url!.AbsolutePath}",
                             ActivityKind.Server);
 
                         var headerKeys = context.Request.Headers.AllKeys;
                         foreach (var headerKey in headerKeys)
                         {
-                            string headerValue = context.Request.Headers[headerKey];
+                            string? headerValue = context.Request.Headers[headerKey];
                             activity?.SetTag($"http.header.{headerKey}", headerValue);
                         }
 
@@ -62,11 +62,11 @@ internal class InstrumentationWithActivitySource : IDisposable
                         using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
                         {
                             requestContent = reader.ReadToEnd();
-                            childSpan.AddEvent(new ActivityEvent("StreamReader.ReadToEnd"));
+                            childSpan?.AddEvent(new ActivityEvent("StreamReader.ReadToEnd"));
                         }
 
                         activity?.SetTag("request.content", requestContent);
-                        activity?.SetTag("request.length", requestContent.Length.ToString());
+                        activity?.SetTag("request.length", requestContent.Length);
 
                         var echo = Encoding.UTF8.GetBytes("echo: " + requestContent);
                         context.Response.ContentEncoding = Encoding.UTF8;
@@ -88,10 +88,10 @@ internal class InstrumentationWithActivitySource : IDisposable
         }
     }
 
-    private class SampleClient : IDisposable
+    private sealed class SampleClient : IDisposable
     {
-        private CancellationTokenSource cts;
-        private Task requestTask;
+        private CancellationTokenSource? cts;
+        private Task? requestTask;
 
         public void Start(string url)
         {
@@ -114,7 +114,7 @@ internal class InstrumentationWithActivitySource : IDisposable
                             count++;
 
                             activity?.AddEvent(new ActivityEvent("PostAsync:Started"));
-                            using var response = await client.PostAsync(url, content, cancellationToken).ConfigureAwait(false);
+                            using var response = await client.PostAsync(new Uri(url, UriKind.Absolute), content, cancellationToken).ConfigureAwait(false);
                             activity?.AddEvent(new ActivityEvent("PostAsync:Ended"));
 
                             activity?.SetTag("http.status_code", (int)response.StatusCode);
@@ -154,7 +154,7 @@ internal class InstrumentationWithActivitySource : IDisposable
             if (this.cts != null)
             {
                 this.cts.Cancel();
-                this.requestTask.Wait();
+                this.requestTask!.Wait();
                 this.requestTask.Dispose();
                 this.cts.Dispose();
             }

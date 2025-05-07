@@ -7,9 +7,9 @@ using OpenTelemetry.Logs;
 
 namespace Examples.Console;
 
-internal class TestLogs
+internal sealed class TestLogs
 {
-    internal static object Run(LogsOptions options)
+    internal static int Run(LogsOptions options)
     {
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
@@ -17,7 +17,8 @@ internal class TestLogs
             {
                 opt.IncludeFormattedMessage = true;
                 opt.IncludeScopes = true;
-                if (options.UseExporter.Equals("otlp", StringComparison.OrdinalIgnoreCase))
+
+                if ("otlp".Equals(options.UseExporter, StringComparison.OrdinalIgnoreCase))
                 {
                     /*
                      * Prerequisite to run this example:
@@ -27,10 +28,10 @@ internal class TestLogs
                      * launch the OpenTelemetry Collector with an OTLP receiver, by running:
                      *
                      *  - On Unix based systems use:
-                     *     docker run --rm -it -p 4317:4317 -p 4318:4318 -v $(pwd):/cfg otel/opentelemetry-collector:0.48.0 --config=/cfg/otlp-collector-example/config.yaml
+                     *     docker run --rm -it -p 4317:4317 -p 4318:4318 -v $(pwd):/cfg otel/opentelemetry-collector:0.123.0 --config=/cfg/otlp-collector-example/config.yaml
                      *
                      *  - On Windows use:
-                     *     docker run --rm -it -p 4317:4317 -p 4318:4318 -v "%cd%":/cfg otel/opentelemetry-collector:0.48.0 --config=/cfg/otlp-collector-example/config.yaml
+                     *     docker run --rm -it -p 4317:4317 -p 4318:4318 -v "%cd%":/cfg otel/opentelemetry-collector:0.123.0 --config=/cfg/otlp-collector-example/config.yaml
                      *
                      * Open another terminal window at the examples/Console/ directory and
                      * launch the OTLP example by running:
@@ -43,31 +44,46 @@ internal class TestLogs
 
                     var protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
 
-                    if (options.Protocol.Trim().ToLower().Equals("grpc"))
+                    if (!string.IsNullOrEmpty(options.Protocol))
                     {
-                        protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-                    }
-                    else if (options.Protocol.Trim().ToLower().Equals("http/protobuf"))
-                    {
-                        protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                        switch (options.Protocol.Trim())
+                        {
+                            case "grpc":
+                                protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                                break;
+                            case "http/protobuf":
+                                protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+                                break;
+                            default:
+                                System.Console.WriteLine($"Export protocol {options.Protocol} is not supported. Default protocol 'grpc' will be used.");
+                                break;
+                        }
                     }
                     else
                     {
-                        System.Console.WriteLine($"Export protocol {options.Protocol} is not supported. Default protocol 'grpc' will be used.");
+                        System.Console.WriteLine("Protocol is null or empty. Default protocol 'grpc' will be used.");
                     }
 
                     var processorType = ExportProcessorType.Batch;
-                    if (options.ProcessorType.Trim().ToLower().Equals("batch"))
+
+                    if (!string.IsNullOrEmpty(options.ProcessorType))
                     {
-                        processorType = ExportProcessorType.Batch;
-                    }
-                    else if (options.ProcessorType.Trim().ToLower().Equals("simple"))
-                    {
-                        processorType = ExportProcessorType.Simple;
+                        switch (options.ProcessorType.Trim())
+                        {
+                            case "batch":
+                                processorType = ExportProcessorType.Batch;
+                                break;
+                            case "simple":
+                                processorType = ExportProcessorType.Simple;
+                                break;
+                            default:
+                                System.Console.WriteLine($"Export processor type {options.ProcessorType} is not supported. Default processor type 'batch' will be used.");
+                                break;
+                        }
                     }
                     else
                     {
-                        System.Console.WriteLine($"Export processor type {options.ProcessorType} is not supported. Default processor type 'batch' will be used.");
+                        System.Console.WriteLine("Processor type is null or empty. Default processor type 'batch' will be used.");
                     }
 
                     opt.AddOtlpExporter((exporterOptions, processorOptions) =>
@@ -96,13 +112,13 @@ internal class TestLogs
             });
         });
 
-        var logger = loggerFactory.CreateLogger<Program>();
-        using (logger.BeginScope("{city}", "Seattle"))
-        using (logger.BeginScope("{storeType}", "Physical"))
+        var logger = loggerFactory.CreateLogger<TestLogs>();
+        using (logger.BeginCityScope("Seattle"))
+        using (logger.BeginStoreTypeScope("Physical"))
         {
-            logger.LogInformation("Hello from {name} {price}.", "tomato", 2.99);
+            logger.HelloFrom("tomato", 2.99);
         }
 
-        return null;
+        return 0;
     }
 }

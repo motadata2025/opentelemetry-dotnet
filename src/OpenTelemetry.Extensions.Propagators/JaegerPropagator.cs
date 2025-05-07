@@ -17,7 +17,7 @@ public class JaegerPropagator : TextMapPropagator
     internal const string JaegerDelimiterEncoded = "%3A"; // while the spec defines the delimiter as a ':', some clients will url encode headers.
     internal const string SampledValue = "1";
 
-    internal static readonly string[] JaegerDelimiters = { JaegerDelimiter, JaegerDelimiterEncoded };
+    internal static readonly string[] JaegerDelimiters = [JaegerDelimiter, JaegerDelimiterEncoded];
 
     private static readonly int TraceId128BitLength = "0af7651916cd43dd8448eb211c80319c".Length;
     private static readonly int SpanIdLength = "00f067aa0ba902b7".Length;
@@ -26,7 +26,7 @@ public class JaegerPropagator : TextMapPropagator
     public override ISet<string> Fields => new HashSet<string> { JaegerHeader };
 
     /// <inheritdoc/>
-    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>> getter)
+    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>?> getter)
     {
         if (context.ActivityContext.IsValid())
         {
@@ -49,7 +49,12 @@ public class JaegerPropagator : TextMapPropagator
         try
         {
             var jaegerHeaderCollection = getter(carrier, JaegerHeader);
-            var jaegerHeader = jaegerHeaderCollection?.First();
+            if (jaegerHeaderCollection == null)
+            {
+                return context;
+            }
+
+            var jaegerHeader = jaegerHeaderCollection.First();
 
             if (string.IsNullOrWhiteSpace(jaegerHeader))
             {
@@ -154,7 +159,7 @@ public class JaegerPropagator : TextMapPropagator
         spanId = ActivitySpanId.CreateFromString(spanIdStr.AsSpan());
 
         var traceFlagsStr = traceComponents[3];
-        if (SampledValue.Equals(traceFlagsStr))
+        if (SampledValue.Equals(traceFlagsStr, StringComparison.Ordinal))
         {
             traceOptions |= ActivityTraceFlags.Recorded;
         }

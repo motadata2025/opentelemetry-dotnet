@@ -7,7 +7,7 @@ using Xunit;
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol.Tests;
 
 [Collection("EnvVars")]
-public class OtlpExporterOptionsTests : IDisposable
+public sealed class OtlpExporterOptionsTests : IDisposable
 {
     public OtlpExporterOptionsTests()
     {
@@ -24,7 +24,12 @@ public class OtlpExporterOptionsTests : IDisposable
     {
         var options = new OtlpExporterOptions();
 
+#if NET462_OR_GREATER || NETSTANDARD2_0
+        Assert.Equal(new Uri(OtlpExporterOptions.DefaultHttpEndpoint), options.Endpoint);
+#else
         Assert.Equal(new Uri(OtlpExporterOptions.DefaultGrpcEndpoint), options.Endpoint);
+#endif
+
         Assert.Null(options.Headers);
         Assert.Equal(10000, options.TimeoutMilliseconds);
         Assert.Equal(OtlpExporterOptions.DefaultOtlpExportProtocol, options.Protocol);
@@ -47,6 +52,14 @@ public class OtlpExporterOptionsTests : IDisposable
     [ClassData(typeof(OtlpSpecConfigDefinitionTests))]
     public void OtlpExporterOptions_EnvironmentVariableOverride(object testDataObject)
     {
+#if NET
+        Assert.NotNull(testDataObject);
+#else
+        if (testDataObject == null)
+        {
+            throw new ArgumentNullException(nameof(testDataObject));
+        }
+#endif
         var testData = testDataObject as OtlpSpecConfigDefinitionTests.TestData;
         Assert.NotNull(testData);
 
@@ -61,6 +74,14 @@ public class OtlpExporterOptionsTests : IDisposable
     [ClassData(typeof(OtlpSpecConfigDefinitionTests))]
     public void OtlpExporterOptions_UsingIConfiguration(object testDataObject)
     {
+#if NET
+        Assert.NotNull(testDataObject);
+#else
+        if (testDataObject == null)
+        {
+            throw new ArgumentNullException(nameof(testDataObject));
+        }
+#endif
         var testData = testDataObject as OtlpSpecConfigDefinitionTests.TestData;
         Assert.NotNull(testData);
 
@@ -74,7 +95,7 @@ public class OtlpExporterOptionsTests : IDisposable
     [Fact]
     public void OtlpExporterOptions_InvalidEnvironmentVariableOverride()
     {
-        var values = new Dictionary<string, string>()
+        var values = new Dictionary<string, string?>
         {
             ["EndpointWithInvalidValue"] = "invalid",
             ["TimeoutWithInvalidValue"] = "invalid",
@@ -95,7 +116,12 @@ public class OtlpExporterOptionsTests : IDisposable
             "NoopHeaders",
             "TimeoutWithInvalidValue");
 
+#if NET462_OR_GREATER || NETSTANDARD2_0
+        Assert.Equal(new Uri(OtlpExporterOptions.DefaultHttpEndpoint), options.Endpoint);
+#else
         Assert.Equal(new Uri(OtlpExporterOptions.DefaultGrpcEndpoint), options.Endpoint);
+#endif
+
         Assert.Equal(10000, options.TimeoutMilliseconds);
         Assert.Equal(OtlpExporterOptions.DefaultOtlpExportProtocol, options.Protocol);
         Assert.Null(options.Headers);
@@ -104,7 +130,7 @@ public class OtlpExporterOptionsTests : IDisposable
     [Fact]
     public void OtlpExporterOptions_SetterOverridesEnvironmentVariable()
     {
-        var values = new Dictionary<string, string>()
+        var values = new Dictionary<string, string?>
         {
             ["Endpoint"] = "http://test:8888",
             ["Timeout"] = "2000",
@@ -143,14 +169,20 @@ public class OtlpExporterOptionsTests : IDisposable
     {
         var options = new OtlpExporterOptions();
 
+#if NET462_OR_GREATER || NETSTANDARD2_0
+        Assert.Equal(new Uri(OtlpExporterOptions.DefaultHttpEndpoint), options.Endpoint);
+#else
         Assert.Equal(new Uri(OtlpExporterOptions.DefaultGrpcEndpoint), options.Endpoint);
+#endif
+
         Assert.Equal(OtlpExporterOptions.DefaultOtlpExportProtocol, options.Protocol);
 
         options.Protocol = OtlpExportProtocol.HttpProtobuf;
 
         Assert.Equal(new Uri(OtlpExporterOptions.DefaultHttpEndpoint), options.Endpoint);
-
+#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
         options.Protocol = OtlpExportProtocol.Grpc;
+#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
 
         Assert.Equal(new Uri(OtlpExporterOptions.DefaultGrpcEndpoint), options.Endpoint);
     }
@@ -158,10 +190,12 @@ public class OtlpExporterOptionsTests : IDisposable
     [Fact]
     public void OtlpExporterOptions_EndpointThrowsWhenSetToNull()
     {
+#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
         var options = new OtlpExporterOptions { Endpoint = new Uri("http://test:8888"), Protocol = OtlpExportProtocol.Grpc };
 
         Assert.Equal(new Uri("http://test:8888"), options.Endpoint);
         Assert.Equal(OtlpExportProtocol.Grpc, options.Protocol);
+#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
     }
 
     [Fact]
@@ -169,7 +203,7 @@ public class OtlpExporterOptionsTests : IDisposable
     {
         var options = new OtlpExporterOptions(OtlpExporterOptionsConfigurationType.Default);
 
-        Assert.Throws<ArgumentNullException>(() => options.Endpoint = null);
+        Assert.Throws<ArgumentNullException>(() => options.Endpoint = null!);
     }
 
     [Fact]
@@ -177,7 +211,7 @@ public class OtlpExporterOptionsTests : IDisposable
     {
         var options = new OtlpExporterOptions(OtlpExporterOptionsConfigurationType.Default);
 
-        Assert.Throws<ArgumentNullException>(() => options.HttpClientFactory = null);
+        Assert.Throws<ArgumentNullException>(() => options.HttpClientFactory = null!);
     }
 
     [Fact]
@@ -210,7 +244,9 @@ public class OtlpExporterOptionsTests : IDisposable
         var targetOptionsWithData = new OtlpExporterOptions
         {
             Endpoint = new Uri("http://metrics_endpoint/"),
+#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
             Protocol = OtlpExportProtocol.Grpc,
+#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
             Headers = "key2=value2",
             TimeoutMilliseconds = 1800,
             HttpClientFactory = () => throw new NotImplementedException(),

@@ -38,7 +38,7 @@ function AddLabelsOnPullRequestsBasedOnFilesChanged {
   # it automatically in order to also allow manual inclusion after reviewing files
   $managedLabels = 'infra', 'documentation', 'dependencies'
   $rootInfraFiles = 'global.json', 'NuGet.config', 'codeowners'
-  $documentationFiles = 'readme.md', 'contributing.md', 'releasing.md', 'versioning.md'
+  $documentationFiles = 'readme.md', 'contributing.md', 'releasing.md', 'versioning.md', 'releasenotes.md'
 
   foreach ($fileChanged in $filesChangedOnPullRequest)
   {
@@ -99,12 +99,12 @@ function AddLabelsOnPullRequestsBasedOnFilesChanged {
         $rootInfraFiles.Contains($fullFileName) -or
         $fileExtension -eq ".props" -or
         $fileExtension -eq ".targets" -or
-        $fileChanged.StartsWith('test\openTelemetry.aotcompatibility'))
+        $fileChanged.StartsWith('test/openTelemetry.aotcompatibility'))
     {
         $added = $labelsToAdd.Add("infra")
     }
 
-    if ($fileChanged.StartsWith('test\benchmarks'))
+    if ($fileChanged.StartsWith('test/benchmarks'))
     {
         $added = $labelsToAdd.Add("perf")
     }

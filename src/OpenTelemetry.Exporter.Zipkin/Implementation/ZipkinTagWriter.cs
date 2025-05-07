@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 using System.Buffers.Text;
 using System.Globalization;
 using System.Text.Json;
@@ -66,4 +64,6 @@ internal sealed class ZipkinTagWriter : JsonStringArrayTagWriter<Utf8JsonWriter>
             tagValueTypeFullName,
             tagKey);
     }
+
+    protected override bool TryWriteEmptyTag(ref Utf8JsonWriter state, string key, object? value) => false;
 }

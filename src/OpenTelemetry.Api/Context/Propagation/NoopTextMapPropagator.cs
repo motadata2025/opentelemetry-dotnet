@@ -5,11 +5,13 @@ namespace OpenTelemetry.Context.Propagation;
 
 internal sealed class NoopTextMapPropagator : TextMapPropagator
 {
+#pragma warning disable CA1805 // Do not initialize unnecessarily
     private static readonly PropagationContext DefaultPropagationContext = default;
+#pragma warning restore CA1805 // Do not initialize unnecessarily
 
-    public override ISet<string> Fields => null;
+    public override ISet<string>? Fields => null;
 
-    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>> getter)
+    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>?> getter)
     {
         return DefaultPropagationContext;
     }

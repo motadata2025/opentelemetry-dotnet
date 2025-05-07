@@ -1,15 +1,14 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Collections;
+using System.Buffers.Binary;
 using System.Diagnostics;
-using System.Net;
 using System.Text;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
+using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Serializer;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Transmission;
-using OtlpCollector = OpenTelemetry.Proto.Collector.Trace.V1;
-using OtlpResource = OpenTelemetry.Proto.Resource.V1;
+using OpenTelemetry.Resources;
 
 namespace OpenTelemetry.Exporter;
 
@@ -19,11 +18,17 @@ namespace OpenTelemetry.Exporter;
 /// </summary>
 public class OtlpTraceExporter : BaseExporter<Activity>
 {
+    private const int GrpcStartWritePosition = 5;
     private readonly SdkLimitOptions sdkLimitOptions;
+    private readonly OtlpExporterTransmissionHandler transmissionHandler;
+    private readonly int startWritePosition;
 
-    private readonly OtlpExporterTransmissionHandler<OtlpCollector.ExportTraceServiceRequest> transmissionHandler;
+    private Resource? resource;
 
-    private OtlpResource.Resource processResource;
+    // Initial buffer size set to ~732KB.
+    // This choice allows us to gradually grow the buffer while targeting a final capacity of around 100 MB,
+    // by the 7th doubling to maintain efficient allocation without frequent resizing.
+    private byte[] buffer = new byte[750000];
 
     private AgentConfigurationProvider agentConfigurationProvider;
 
@@ -51,6 +56,7 @@ public class OtlpTraceExporter : BaseExporter<Activity>
     // Constants for ENV var
     private static readonly string ENV_MOTADATA_TRACE_SERVICE_CHECK_TIME = "MOTADATA_TRACE_SERVICE_CHECK_TIME_SEC";
 
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OtlpTraceExporter"/> class.
     /// </summary>
@@ -66,36 +72,36 @@ public class OtlpTraceExporter : BaseExporter<Activity>
     /// <param name="exporterOptions"><see cref="OtlpExporterOptions"/>.</param>
     /// <param name="sdkLimitOptions"><see cref="SdkLimitOptions"/>.</param>
     /// <param name="experimentalOptions"><see cref="ExperimentalOptions"/>.</param>
-    /// <param name="transmissionHandler"><see cref="OtlpExporterTransmissionHandler{T}"/>.</param>
+    /// <param name="transmissionHandler"><see cref="OtlpExporterTransmissionHandler"/>.</param>
     internal OtlpTraceExporter(
         OtlpExporterOptions exporterOptions,
         SdkLimitOptions sdkLimitOptions,
         ExperimentalOptions experimentalOptions,
-        OtlpExporterTransmissionHandler<OtlpCollector.ExportTraceServiceRequest> transmissionHandler = null)
+        OtlpExporterTransmissionHandler? transmissionHandler = null)
     {
         Debug.Assert(exporterOptions != null, "exporterOptions was null");
         Debug.Assert(sdkLimitOptions != null, "sdkLimitOptions was null");
 
-        this.sdkLimitOptions = sdkLimitOptions;
-
-        this.transmissionHandler = transmissionHandler ?? exporterOptions.GetTraceExportTransmissionHandler(experimentalOptions);
-
         this.agentConfigurationProvider = new AgentConfigurationProvider();
 
+        this.sdkLimitOptions = sdkLimitOptions!;
+#if NET462_OR_GREATER || NETSTANDARD2_0
+        this.startWritePosition = 0;
+#else
+        this.startWritePosition = exporterOptions!.Protocol == OtlpExportProtocol.Grpc ? GrpcStartWritePosition : 0;
+#endif
+        this.transmissionHandler = transmissionHandler ?? exporterOptions!.GetExportTransmissionHandler(experimentalOptions, OtlpSignalType.Traces);
     }
 
-    internal OtlpResource.Resource ProcessResource => this.processResource ??= this.ParentProvider.GetResource().ToOtlpResource();
+    internal Resource Resource => this.resource ??= this.ParentProvider.GetResource();
 
     /// <inheritdoc/>
+#pragma warning disable CA1725 // Parameter names should match base declaration
     public override ExportResult Export(in Batch<Activity> activityBatch)
+#pragma warning restore CA1725 // Parameter names should match base declaration
     {
-        Console.WriteLine("printing the path separator : " + PATH_SEPARATOR);
         // Prevents the exporter's gRPC and HTTP operations from being instrumented.
         using var scope = SuppressInstrumentationScope.Begin();
-
-        var request = new OtlpCollector.ExportTraceServiceRequest();
-
-        request.AddBatch(this.sdkLimitOptions, this.ProcessResource, activityBatch);
 
         if (string.IsNullOrEmpty(serviceName))
         {
@@ -104,51 +110,58 @@ public class OtlpTraceExporter : BaseExporter<Activity>
             this.ScheduleJobToCheckConfiguration();
         }
 
-        if (!isShutdown)
+        try
         {
-            try
+            int writePosition = ProtobufOtlpTraceSerializer.WriteTraceData(ref this.buffer, this.startWritePosition, this.sdkLimitOptions, this.Resource, activityBatch);
+
+            Console.WriteLine("This is writeLine position");
+            Console.WriteLine(writePosition);
+
+            if (this.startWritePosition == GrpcStartWritePosition)
             {
-                Console.WriteLine("--------------Printing Start -------------");
-                Console.WriteLine(request.ToString());
-                Console.WriteLine("---------------Printing End --------------");
-
-                Console.WriteLine("Exporting...");
-                byte[] jsonBytes = Encoding.UTF8.GetBytes(request.ToString());
-                Console.WriteLine($"Size before Compression : {jsonBytes.Length}");
-
-                byte[] compressData = IronSnappy.Snappy.Encode(jsonBytes);
-
-                Console.WriteLine($"size after compression: {compressData.Length}");
-
-
-                byte[] reverseData = IronSnappy.Snappy.Decode(compressData);
-                string json = Encoding.UTF8.GetString(reverseData);
-                Console.WriteLine("After reverse engineering");
-                Console.WriteLine(json);
-                long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                string fileName = string.Format(TRACE_FILE_FORMAT, this.serviceName, timestamp);
-                string filePath = Path.Combine(DATA_DIR, fileName);
-
-                // Write the compressed trace data to file.
-                File.WriteAllBytes(filePath, compressData);
-
-                Console.WriteLine($"Trace written to file: {filePath}");
-
-
-                if (!this.transmissionHandler.TrySubmitRequest(request))
-                {
-                    return ExportResult.Failure;
-                }
+                Console.WriteLine("This is GrpcStartWritePosition");
+                // Grpc payload consists of 3 parts
+                // byte 0 - Specifying if the payload is compressed.
+                // 1-4 byte - Specifies the length of payload in big endian format.
+                // 5 and above -  Protobuf serialized data.
+                Span<byte> data = new Span<byte>(this.buffer, 1, 4);
+                var dataLength = writePosition - GrpcStartWritePosition;
+                BinaryPrimitives.WriteUInt32BigEndian(data, (uint)dataLength);
             }
-            catch (Exception ex)
+
+            string dataBeforeSerlization = Encoding.UTF8.GetString(this.buffer, 0, writePosition);
+
+            Console.WriteLine("Data before the deserlization");
+            Console.WriteLine(dataBeforeSerlization);
+            Console.WriteLine("--------------Printing Start -------------");
+            byte[] serializedData = new byte[writePosition];
+            Buffer.BlockCopy(this.buffer, 0, serializedData, 0, writePosition);
+
+            string text = Encoding.UTF8.GetString(serializedData, 0, writePosition);
+            Console.WriteLine(text);
+
+            Console.WriteLine("Size before Compression : " + serializedData.Length);
+            var compressData = IronSnappy.Snappy.Encode(serializedData);
+            Console.WriteLine("Size after Compression : " +compressData.Length);
+
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            string fileName = string.Format(TRACE_FILE_FORMAT, this.serviceName, timestamp);
+            string filePath = Path.Combine(DATA_DIR, fileName);
+
+            // Write the compressed trace data to file.
+            File.WriteAllBytes(filePath, compressData);
+
+            Console.WriteLine($"Trace written to file: {filePath}");
+
+            if (!this.transmissionHandler.TrySubmitRequest(this.buffer, writePosition))
             {
-                OpenTelemetryProtocolExporterEventSource.Log.ExportMethodException(ex);
                 return ExportResult.Failure;
             }
-            finally
-            {
-                request.Return();
-            }
+        }
+        catch (Exception ex)
+        {
+            OpenTelemetryProtocolExporterEventSource.Log.ExportMethodException(ex);
+            return ExportResult.Failure;
         }
 
         return ExportResult.Success;

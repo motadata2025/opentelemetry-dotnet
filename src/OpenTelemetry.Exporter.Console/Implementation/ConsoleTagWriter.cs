@@ -1,9 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using OpenTelemetry.Internal;
 
@@ -22,8 +21,13 @@ internal sealed class ConsoleTagWriter : JsonStringArrayTagWriter<ConsoleTagWrit
 
     public bool TryTransformTag(KeyValuePair<string, object?> tag, out KeyValuePair<string, string> result)
     {
+        return this.TryTransformTag(tag.Key, tag.Value, out result);
+    }
+
+    public bool TryTransformTag(string key, object? value, out KeyValuePair<string, string> result)
+    {
         ConsoleTag consoleTag = default;
-        if (this.TryWriteTag(ref consoleTag, tag))
+        if (this.TryWriteTag(ref consoleTag, key, value))
         {
             result = new KeyValuePair<string, string>(consoleTag.Key!, consoleTag.Value!);
             return true;
@@ -36,13 +40,13 @@ internal sealed class ConsoleTagWriter : JsonStringArrayTagWriter<ConsoleTagWrit
     protected override void WriteIntegralTag(ref ConsoleTag consoleTag, string key, long value)
     {
         consoleTag.Key = key;
-        consoleTag.Value = value.ToString();
+        consoleTag.Value = value.ToString(CultureInfo.InvariantCulture);
     }
 
     protected override void WriteFloatingPointTag(ref ConsoleTag consoleTag, string key, double value)
     {
         consoleTag.Key = key;
-        consoleTag.Value = value.ToString();
+        consoleTag.Value = value.ToString(CultureInfo.InvariantCulture);
     }
 
     protected override void WriteBooleanTag(ref ConsoleTag consoleTag, string key, bool value)
@@ -68,6 +72,13 @@ internal sealed class ConsoleTagWriter : JsonStringArrayTagWriter<ConsoleTagWrit
         string tagValueTypeFullName)
     {
         this.onUnsupportedTagDropped(tagKey, tagValueTypeFullName);
+    }
+
+    protected override bool TryWriteEmptyTag(ref ConsoleTag consoleTag, string key, object? value)
+    {
+        consoleTag.Key = key;
+        consoleTag.Value = null;
+        return true;
     }
 
     internal struct ConsoleTag

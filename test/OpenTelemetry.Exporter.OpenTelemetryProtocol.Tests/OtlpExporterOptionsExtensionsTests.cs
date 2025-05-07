@@ -9,71 +9,15 @@ using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Transmission;
 using Xunit;
-using Xunit.Sdk;
 
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol.Tests;
 
 public class OtlpExporterOptionsExtensionsTests
 {
     [Theory]
-    [InlineData("key=value", new string[] { "key" }, new string[] { "value" })]
-    [InlineData("key1=value1,key2=value2", new string[] { "key1", "key2" }, new string[] { "value1", "value2" })]
-    [InlineData("key1 = value1, key2=value2 ", new string[] { "key1", "key2" }, new string[] { "value1", "value2" })]
-    [InlineData("key==value", new string[] { "key" }, new string[] { "=value" })]
-    [InlineData("access-token=abc=/123,timeout=1234", new string[] { "access-token", "timeout" }, new string[] { "abc=/123", "1234" })]
-    [InlineData("key1=value1;key2=value2", new string[] { "key1" }, new string[] { "value1;key2=value2" })] // semicolon is not treated as a delimiter (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#specifying-headers-via-environment-variables)
-    [InlineData("Authorization=Basic%20AAA", new string[] { "authorization" }, new string[] { "Basic AAA" })]
-    [InlineData("Authorization=Basic AAA", new string[] { "authorization" }, new string[] { "Basic AAA" })]
-    public void GetMetadataFromHeadersWorksCorrectFormat(string headers, string[] keys, string[] values)
-    {
-        var options = new OtlpExporterOptions
-        {
-            Headers = headers,
-        };
-        var metadata = options.GetMetadataFromHeaders();
-
-        Assert.Equal(OtlpExporterOptions.StandardHeaders.Length + keys.Length, metadata.Count);
-
-        for (int i = 0; i < keys.Length; i++)
-        {
-            Assert.Contains(metadata, entry => entry.Key == keys[i] && entry.Value == values[i]);
-        }
-
-        for (int i = 0; i < OtlpExporterOptions.StandardHeaders.Length; i++)
-        {
-            // Metadata key is always converted to lowercase.
-            // See: https://cloud.google.com/dotnet/docs/reference/Grpc.Core/latest/Grpc.Core.Metadata.Entry#Grpc_Core_Metadata_Entry__ctor_System_String_System_String_
-            Assert.Contains(metadata, entry => entry.Key == OtlpExporterOptions.StandardHeaders[i].Key.ToLower() && entry.Value == OtlpExporterOptions.StandardHeaders[i].Value);
-        }
-    }
-
-    [Theory]
-    [InlineData("headers")]
-    [InlineData("key,value")]
-    public void GetMetadataFromHeadersThrowsExceptionOnInvalidFormat(string headers)
-    {
-        try
-        {
-            var options = new OtlpExporterOptions
-            {
-                Headers = headers,
-            };
-            var metadata = options.GetMetadataFromHeaders();
-        }
-        catch (Exception ex)
-        {
-            Assert.IsType<ArgumentException>(ex);
-            Assert.Equal("Headers provided in an invalid format.", ex.Message);
-            return;
-        }
-
-        throw new XunitException("GetMetadataFromHeaders did not throw an exception for invalid input headers");
-    }
-
-    [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public void GetHeaders_NoOptionHeaders_ReturnsStandardHeaders(string optionHeaders)
+    public void GetHeaders_NoOptionHeaders_ReturnsStandardHeaders(string? optionHeaders)
     {
         var options = new OtlpExporterOptions
         {
@@ -91,8 +35,36 @@ public class OtlpExporterOptionsExtensionsTests
     }
 
     [Theory]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcTraceExportClient))]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpTraceExportClient))]
+    [InlineData(" ")]
+    [InlineData(",key1=value1,key2=value2,")]
+    [InlineData(",,key1=value1,,key2=value2,,")]
+    [InlineData("key1")]
+    public void GetHeaders_InvalidOptionHeaders_ThrowsArgumentException(string inputOptionHeaders)
+    {
+        VerifyHeaders(inputOptionHeaders, string.Empty, true);
+    }
+
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("key1=value1", "key1=value1")]
+    [InlineData("key1=value1,key2=value2", "key1=value1,key2=value2")]
+    [InlineData("key1=value1,key2=value2,key3=value3", "key1=value1,key2=value2,key3=value3")]
+    [InlineData(" key1 = value1 , key2=value2 ", "key1=value1,key2=value2")]
+    [InlineData("key1= value with spaces ,key2=another value", "key1=value with spaces,key2=another value")]
+    [InlineData("=value1", "=value1")]
+    [InlineData("key1=", "key1=")]
+    [InlineData("key1=value1%2Ckey2=value2", "key1=value1,key2=value2")]
+    [InlineData("key1=value1%2Ckey2=value2%2Ckey3=value3", "key1=value1,key2=value2,key3=value3")]
+    public void GetHeaders_ValidAndUrlEncodedHeaders_ReturnsCorrectHeaders(string inputOptionHeaders, string expectedNormalizedOptional)
+    {
+        VerifyHeaders(inputOptionHeaders, expectedNormalizedOptional);
+    }
+
+    [Theory]
+#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
+    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcExportClient))]
+#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
+    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpExportClient))]
     public void GetTraceExportClient_SupportedProtocol_ReturnsCorrectExportClient(OtlpExportProtocol protocol, Type expectedExportClientType)
     {
         var options = new OtlpExporterOptions
@@ -100,7 +72,7 @@ public class OtlpExporterOptionsExtensionsTests
             Protocol = protocol,
         };
 
-        var exportClient = options.GetTraceExportClient();
+        var exportClient = options.GetExportClient(OtlpSignalType.Traces);
 
         Assert.Equal(expectedExportClientType, exportClient.GetType());
     }
@@ -113,7 +85,7 @@ public class OtlpExporterOptionsExtensionsTests
             Protocol = (OtlpExportProtocol)123,
         };
 
-        Assert.Throws<NotSupportedException>(() => options.GetTraceExportClient());
+        Assert.Throws<NotSupportedException>(() => options.GetExportClient(OtlpSignalType.Traces));
     }
 
     [Theory]
@@ -121,95 +93,109 @@ public class OtlpExporterOptionsExtensionsTests
     [InlineData("http://test:8888/", "http://test:8888/v1/traces")]
     [InlineData("http://test:8888/v1/traces", "http://test:8888/v1/traces")]
     [InlineData("http://test:8888/v1/traces/", "http://test:8888/v1/traces/")]
-    public void AppendPathIfNotPresent_TracesPath_AppendsCorrectly(string inputUri, string expectedUri)
+    public void AppendPathIfNotPresent_TracesPath_AppendsCorrectly(string input, string expected)
     {
-        var uri = new Uri(inputUri, UriKind.Absolute);
+        var uri = new Uri(input, UriKind.Absolute);
 
         var resultUri = uri.AppendPathIfNotPresent("v1/traces");
 
-        Assert.Equal(expectedUri, resultUri.AbsoluteUri);
+        Assert.Equal(expected, resultUri.AbsoluteUri);
     }
 
     [Theory]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcTraceExportClient), false, 10000, null)]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpTraceExportClient), false, 10000, null)]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpTraceExportClient), true, 8000, null)]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcMetricsExportClient), false, 10000, null)]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpMetricsExportClient), false, 10000, null)]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpMetricsExportClient), true, 8000, null)]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcLogExportClient), false, 10000, null)]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpLogExportClient), false, 10000, null)]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpLogExportClient), true, 8000, null)]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcTraceExportClient), false, 10000, "in_memory")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpTraceExportClient), false, 10000, "in_memory")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpTraceExportClient), true, 8000, "in_memory")]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcMetricsExportClient), false, 10000, "in_memory")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpMetricsExportClient), false, 10000, "in_memory")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpMetricsExportClient), true, 8000, "in_memory")]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcLogExportClient), false, 10000, "in_memory")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpLogExportClient), false, 10000, "in_memory")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpLogExportClient), true, 8000, "in_memory")]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcTraceExportClient), false, 10000, "disk")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpTraceExportClient), false, 10000, "disk")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpTraceExportClient), true, 8000, "disk")]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcMetricsExportClient), false, 10000, "disk")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpMetricsExportClient), false, 10000, "disk")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpMetricsExportClient), true, 8000, "disk")]
-    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcLogExportClient), false, 10000, "disk")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpLogExportClient), false, 10000, "disk")]
-    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpLogExportClient), true, 8000, "disk")]
-    public void GetTransmissionHandler_InitializesCorrectHandlerExportClientAndTimeoutValue(OtlpExportProtocol protocol, Type exportClientType, bool customHttpClient, int expectedTimeoutMilliseconds, string retryStrategy)
+#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
+    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcExportClient), false, 10000, null)]
+    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcExportClient), false, 10000, "in_memory")]
+    [InlineData(OtlpExportProtocol.Grpc, typeof(OtlpGrpcExportClient), false, 10000, "disk")]
+#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
+    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpExportClient), false, 10000, null)]
+    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpExportClient), true, 8000, null)]
+    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpExportClient), false, 10000, "in_memory")]
+    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpExportClient), true, 8000, "in_memory")]
+    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpExportClient), false, 10000, "disk")]
+    [InlineData(OtlpExportProtocol.HttpProtobuf, typeof(OtlpHttpExportClient), true, 8000, "disk")]
+    public void GetTransmissionHandler_InitializesCorrectHandlerExportClientAndTimeoutValue(OtlpExportProtocol protocol, Type exportClientType, bool customHttpClient, int expectedTimeoutMilliseconds, string? retryStrategy)
     {
         var exporterOptions = new OtlpExporterOptions() { Protocol = protocol };
         if (customHttpClient)
         {
             exporterOptions.HttpClientFactory = () =>
             {
-                return new HttpClient() { Timeout = TimeSpan.FromMilliseconds(expectedTimeoutMilliseconds) };
+                return new HttpClient { Timeout = TimeSpan.FromMilliseconds(expectedTimeoutMilliseconds) };
             };
         }
 
         var configuration = new ConfigurationBuilder()
-         .AddInMemoryCollection(new Dictionary<string, string> { [ExperimentalOptions.OtlpRetryEnvVar] = retryStrategy })
+         .AddInMemoryCollection(new Dictionary<string, string?> { [ExperimentalOptions.OtlpRetryEnvVar] = retryStrategy })
          .Build();
 
-        if (exportClientType == typeof(OtlpGrpcTraceExportClient) || exportClientType == typeof(OtlpHttpTraceExportClient))
-        {
-            var transmissionHandler = exporterOptions.GetTraceExportTransmissionHandler(new ExperimentalOptions(configuration));
-
-            AssertTransmissionHandler(transmissionHandler, exportClientType, expectedTimeoutMilliseconds, retryStrategy);
-        }
-        else if (exportClientType == typeof(OtlpGrpcMetricsExportClient) || exportClientType == typeof(OtlpHttpMetricsExportClient))
-        {
-            var transmissionHandler = exporterOptions.GetMetricsExportTransmissionHandler(new ExperimentalOptions(configuration));
-
-            AssertTransmissionHandler(transmissionHandler, exportClientType, expectedTimeoutMilliseconds, retryStrategy);
-        }
-        else
-        {
-            var transmissionHandler = exporterOptions.GetLogsExportTransmissionHandler(new ExperimentalOptions(configuration));
-
-            AssertTransmissionHandler(transmissionHandler, exportClientType, expectedTimeoutMilliseconds, retryStrategy);
-        }
+        var transmissionHandler = exporterOptions.GetExportTransmissionHandler(new ExperimentalOptions(configuration), OtlpSignalType.Traces);
+        AssertTransmissionHandler(transmissionHandler, exportClientType, expectedTimeoutMilliseconds, retryStrategy);
     }
 
-    private static void AssertTransmissionHandler<T>(OtlpExporterTransmissionHandler<T> transmissionHandler, Type exportClientType, int expectedTimeoutMilliseconds, string retryStrategy)
+    private static void AssertTransmissionHandler(OtlpExporterTransmissionHandler transmissionHandler, Type exportClientType, int expectedTimeoutMilliseconds, string? retryStrategy)
     {
         if (retryStrategy == "in_memory")
         {
-            Assert.True(transmissionHandler is OtlpExporterRetryTransmissionHandler<T>);
+            Assert.True(transmissionHandler is OtlpExporterRetryTransmissionHandler);
         }
         else if (retryStrategy == "disk")
         {
-            Assert.True(transmissionHandler is OtlpExporterPersistentStorageTransmissionHandler<T>);
+            Assert.True(transmissionHandler is OtlpExporterPersistentStorageTransmissionHandler);
         }
         else
         {
-            Assert.True(transmissionHandler is OtlpExporterTransmissionHandler<T>);
+            Assert.True(transmissionHandler is OtlpExporterTransmissionHandler);
         }
 
         Assert.Equal(exportClientType, transmissionHandler.ExportClient.GetType());
 
         Assert.Equal(expectedTimeoutMilliseconds, transmissionHandler.TimeoutMilliseconds);
+    }
+
+    /// <summary>
+    /// Validates whether the `Headers` property in `OtlpExporterOptions` is correctly processed and parsed.
+    /// It also verifies that the extracted headers match the expected values and checks for expected exceptions.
+    /// </summary>
+    /// <param name="inputOptionHeaders">The raw header string assigned to `OtlpExporterOptions`.
+    /// The format should be "key1=value1,key2=value2" (comma-separated key-value pairs).</param>
+    /// <param name="expectedNormalizedOptional">A string representing expected additional headers.
+    /// This will be parsed into a dictionary and compared with the actual extracted headers.</param>
+    /// <param name="expectException">If `true`, the method expects `GetHeaders` to throw an `ArgumentException`
+    /// when processing `inputOptionHeaders`.</param>
+    private static void VerifyHeaders(string inputOptionHeaders, string expectedNormalizedOptional, bool expectException = false)
+    {
+        var options = new OtlpExporterOptions { Headers = inputOptionHeaders };
+
+        if (expectException)
+        {
+            Assert.Throws<ArgumentException>(() =>
+                options.GetHeaders<Dictionary<string, string>>((d, k, v) => d.Add(k, v)));
+            return;
+        }
+
+        var headers = options.GetHeaders<Dictionary<string, string>>((d, k, v) => d.Add(k, v));
+        var expectedOptional = new Dictionary<string, string>();
+
+        if (!string.IsNullOrEmpty(expectedNormalizedOptional))
+        {
+            foreach (var segment in expectedNormalizedOptional.Split([','], StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = segment.Split(['='], 2);
+                expectedOptional.Add(parts[0].Trim(), parts[1].Trim());
+            }
+        }
+
+        Assert.Equal(OtlpExporterOptions.StandardHeaders.Length + expectedOptional.Count, headers.Count);
+
+        foreach (var kvp in expectedOptional)
+        {
+            Assert.Contains(headers, h => h.Key == kvp.Key && h.Value == kvp.Value);
+        }
+
+        foreach (var std in OtlpExporterOptions.StandardHeaders)
+        {
+            Assert.Contains(headers, h => h.Key == std.Key && h.Value == std.Value);
+        }
     }
 }

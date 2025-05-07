@@ -14,7 +14,7 @@ internal readonly struct MetricStreamIdentity : IEquatable<MetricStreamIdentity>
     {
         this.MeterName = instrument.Meter.Name;
         this.MeterVersion = instrument.Meter.Version ?? string.Empty;
-        this.MeterTags = instrument.Meter.Tags;
+        this.MeterTags = instrument.Meter.Tags != null ? new Tags(instrument.Meter.Tags.ToArray()) : null;
         this.InstrumentName = metricStreamConfiguration?.Name ?? instrument.Name;
         this.Unit = instrument.Unit ?? string.Empty;
         this.Description = metricStreamConfiguration?.Description ?? instrument.Description ?? string.Empty;
@@ -22,16 +22,17 @@ internal readonly struct MetricStreamIdentity : IEquatable<MetricStreamIdentity>
         this.ViewId = metricStreamConfiguration?.ViewId;
         this.MetricStreamName = $"{this.MeterName}.{this.MeterVersion}.{this.InstrumentName}";
         this.TagKeys = metricStreamConfiguration?.CopiedTagKeys;
-        this.HistogramBucketBounds = (metricStreamConfiguration as ExplicitBucketHistogramConfiguration)?.CopiedBoundaries;
+        this.HistogramBucketBounds = GetExplicitBucketHistogramBounds(instrument, metricStreamConfiguration);
         this.ExponentialHistogramMaxSize = (metricStreamConfiguration as Base2ExponentialBucketHistogramConfiguration)?.MaxSize ?? 0;
         this.ExponentialHistogramMaxScale = (metricStreamConfiguration as Base2ExponentialBucketHistogramConfiguration)?.MaxScale ?? 0;
         this.HistogramRecordMinMax = (metricStreamConfiguration as HistogramConfiguration)?.RecordMinMax ?? true;
 
-#if NET6_0_OR_GREATER
+#if NET
         HashCode hashCode = default;
         hashCode.Add(this.InstrumentType);
         hashCode.Add(this.MeterName);
         hashCode.Add(this.MeterVersion);
+        hashCode.Add(this.MeterTags);
         hashCode.Add(this.InstrumentName);
         hashCode.Add(this.HistogramRecordMinMax);
         hashCode.Add(this.Unit);
@@ -63,8 +64,7 @@ internal readonly struct MetricStreamIdentity : IEquatable<MetricStreamIdentity>
             hash = (hash * 31) + this.InstrumentType.GetHashCode();
             hash = (hash * 31) + this.MeterName.GetHashCode();
             hash = (hash * 31) + this.MeterVersion.GetHashCode();
-
-            // MeterTags is not part of identity, so not included here.
+            hash = (hash * 31) + this.MeterTags?.GetHashCode() ?? 0;
             hash = (hash * 31) + this.InstrumentName.GetHashCode();
             hash = (hash * 31) + this.HistogramRecordMinMax.GetHashCode();
             hash = (hash * 31) + this.ExponentialHistogramMaxSize.GetHashCode();
@@ -91,7 +91,7 @@ internal readonly struct MetricStreamIdentity : IEquatable<MetricStreamIdentity>
 
     public string MeterVersion { get; }
 
-    public IEnumerable<KeyValuePair<string, object?>>? MeterTags { get; }
+    public Tags? MeterTags { get; }
 
     public string InstrumentName { get; }
 
@@ -141,6 +141,7 @@ internal readonly struct MetricStreamIdentity : IEquatable<MetricStreamIdentity>
             && this.Unit == other.Unit
             && this.Description == other.Description
             && this.ViewId == other.ViewId
+            && this.MeterTags == other.MeterTags
             && this.HistogramRecordMinMax == other.HistogramRecordMinMax
             && this.ExponentialHistogramMaxSize == other.ExponentialHistogramMaxSize
             && this.ExponentialHistogramMaxScale == other.ExponentialHistogramMaxScale
@@ -149,6 +150,52 @@ internal readonly struct MetricStreamIdentity : IEquatable<MetricStreamIdentity>
     }
 
     public override readonly int GetHashCode() => this.hashCode;
+
+    private static double[]? GetExplicitBucketHistogramBounds(Instrument instrument, MetricStreamConfiguration? metricStreamConfiguration)
+    {
+        if (metricStreamConfiguration is ExplicitBucketHistogramConfiguration explicitBucketHistogramConfiguration
+            && explicitBucketHistogramConfiguration.CopiedBoundaries != null)
+        {
+            return explicitBucketHistogramConfiguration.CopiedBoundaries;
+        }
+
+        return instrument switch
+        {
+            Histogram<long> longHistogram => GetExplicitBucketHistogramBoundsFromAdvice(longHistogram),
+            Histogram<int> intHistogram => GetExplicitBucketHistogramBoundsFromAdvice(intHistogram),
+            Histogram<short> shortHistogram => GetExplicitBucketHistogramBoundsFromAdvice(shortHistogram),
+            Histogram<byte> byteHistogram => GetExplicitBucketHistogramBoundsFromAdvice(byteHistogram),
+            Histogram<float> floatHistogram => GetExplicitBucketHistogramBoundsFromAdvice(floatHistogram),
+            Histogram<double> doubleHistogram => GetExplicitBucketHistogramBoundsFromAdvice(doubleHistogram),
+            _ => null,
+        };
+    }
+
+    private static double[]? GetExplicitBucketHistogramBoundsFromAdvice<T>(Histogram<T> histogram)
+        where T : struct
+    {
+        var adviceExplicitBucketBoundaries = histogram.Advice?.HistogramBucketBoundaries;
+        if (adviceExplicitBucketBoundaries == null)
+        {
+            return null;
+        }
+
+        if (typeof(T) == typeof(double))
+        {
+            return ((IReadOnlyList<double>)adviceExplicitBucketBoundaries).ToArray();
+        }
+        else
+        {
+            double[] explicitBucketBoundaries = new double[adviceExplicitBucketBoundaries.Count];
+
+            for (int i = 0; i < adviceExplicitBucketBoundaries.Count; i++)
+            {
+                explicitBucketBoundaries[i] = Convert.ToDouble(adviceExplicitBucketBoundaries[i]);
+            }
+
+            return explicitBucketBoundaries;
+        }
+    }
 
     private static bool HistogramBoundsEqual(double[]? bounds1, double[]? bounds2)
     {

@@ -3,21 +3,20 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Security.Cryptography;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
 
 namespace Examples.Console;
 
-internal class TestPrometheusExporter
+internal sealed class TestPrometheusExporter
 {
     private static readonly Meter MyMeter = new("MyMeter");
     private static readonly Meter MyMeter2 = new("MyMeter2");
     private static readonly Counter<double> Counter = MyMeter.CreateCounter<double>("myCounter", description: "A counter for demonstration purpose.");
     private static readonly Histogram<long> MyHistogram = MyMeter.CreateHistogram<long>("myHistogram");
-    private static readonly ThreadLocal<Random> ThreadLocalRandom = new(() => new Random());
 
-    internal static object Run(int port)
+    internal static int Run(PrometheusOptions options)
     {
         /* prometheus.yml example. Adjust port as per actual.
 
@@ -35,7 +34,7 @@ internal class TestPrometheusExporter
             .AddMeter(MyMeter.Name)
             .AddMeter(MyMeter2.Name)
             .AddPrometheusHttpListener(
-                options => options.UriPrefixes = new string[] { $"http://localhost:{port}/" })
+                o => o.UriPrefixes = [$"http://localhost:{options.Port}/"])
             .Build();
 
         var process = Process.GetCurrentProcess();
@@ -57,12 +56,12 @@ internal class TestPrometheusExporter
             {
                 Counter.Add(9.9, new("name", "apple"), new("color", "red"));
                 Counter.Add(99.9, new("name", "lemon"), new("color", "yellow"));
-                MyHistogram.Record(ThreadLocalRandom.Value.Next(1, 1500), new("tag1", "value1"), new("tag2", "value2"));
+                MyHistogram.Record(RandomNumberGenerator.GetInt32(1, 1500), new("tag1", "value1"), new("tag2", "value2"));
                 Task.Delay(10).Wait();
             }
         });
 
-        System.Console.WriteLine($"PrometheusExporter exposes metrics via http://localhost:{port}/metrics/");
+        System.Console.WriteLine($"PrometheusExporter exposes metrics via http://localhost:{options.Port}/metrics/");
         System.Console.WriteLine($"Press Esc key to exit...");
         while (true)
         {
@@ -80,7 +79,7 @@ internal class TestPrometheusExporter
             Task.Delay(200).Wait();
         }
 
-        return null;
+        return 0;
     }
 
     private static IEnumerable<Measurement<double>> GetThreadCpuTime(Process process)

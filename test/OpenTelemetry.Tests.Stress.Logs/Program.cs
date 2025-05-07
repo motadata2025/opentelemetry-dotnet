@@ -5,16 +5,17 @@ using Microsoft.Extensions.Logging;
 
 namespace OpenTelemetry.Tests.Stress;
 
-public static class Program
+internal static class Program
 {
     public static int Main(string[] args)
     {
         return StressTestFactory.RunSynchronously<LogsStressTest>(args);
     }
 
-    private sealed class LogsStressTest : StressTest<StressTestOptions>
+#pragma warning disable CA1812 // Avoid uninstantiated internal classes
+    private sealed class LogsStressTest : StressTests<StressTestOptions>
+#pragma warning restore CA1812 // Avoid uninstantiated internal classes
     {
-        private static readonly Payload Payload = new();
         private readonly ILoggerFactory loggerFactory;
         private readonly ILogger logger;
 
@@ -32,24 +33,24 @@ public static class Program
             this.logger = this.loggerFactory.CreateLogger<LogsStressTest>();
         }
 
-        protected override void RunWorkItemInParallel()
+        protected override void Dispose(bool disposing)
         {
-            this.logger.Log(
-                logLevel: LogLevel.Information,
-                eventId: 2,
-                state: Payload,
-                exception: null,
-                formatter: (state, ex) => string.Empty);
-        }
-
-        protected override void Dispose(bool isDisposing)
-        {
-            if (isDisposing)
+            if (disposing)
             {
                 this.loggerFactory.Dispose();
             }
 
-            base.Dispose(isDisposing);
+            base.Dispose(disposing);
+        }
+
+        protected override void RunWorkItemInParallel()
+        {
+            this.logger.FoodRecallNotice(
+                brandName: "Contoso",
+                productDescription: "Salads",
+                productType: "Food & Beverages",
+                recallReasonDescription: "due to a possible health risk from Listeria monocytogenes",
+                companyName: "Contoso Fresh Vegetables, Inc.");
         }
     }
 }

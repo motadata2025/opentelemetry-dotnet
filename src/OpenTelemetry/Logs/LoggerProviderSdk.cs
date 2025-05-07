@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics;
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
-#endif
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Internal;
@@ -18,11 +16,11 @@ namespace OpenTelemetry.Logs;
 internal sealed class LoggerProviderSdk : LoggerProvider
 {
     internal readonly IServiceProvider ServiceProvider;
-    internal readonly IDisposable? OwnedServiceProvider;
+    internal IDisposable? OwnedServiceProvider;
     internal bool Disposed;
     internal int ShutdownCount;
 
-    private readonly List<object> instrumentations = new();
+    private readonly List<object> instrumentations = [];
     private ILogRecordPool? threadStaticPool = LogRecordThreadStaticPool.Instance;
 
     public LoggerProviderSdk(
@@ -201,9 +199,7 @@ internal sealed class LoggerProviderSdk : LoggerProvider
 #endif
         override bool TryCreateLogger(
         string? name,
-#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
         [NotNullWhen(true)]
-#endif
         out Logger? logger)
     {
         logger = new LoggerSdk(this, name);
@@ -217,21 +213,20 @@ internal sealed class LoggerProviderSdk : LoggerProvider
         {
             if (disposing)
             {
-                if (this.instrumentations != null)
+                foreach (var item in this.instrumentations)
                 {
-                    foreach (var item in this.instrumentations)
-                    {
-                        (item as IDisposable)?.Dispose();
-                    }
-
-                    this.instrumentations.Clear();
+                    (item as IDisposable)?.Dispose();
                 }
+
+                this.instrumentations.Clear();
 
                 // Wait for up to 5 seconds grace period
                 this.Processor?.Shutdown(5000);
                 this.Processor?.Dispose();
+                this.Processor = null;
 
                 this.OwnedServiceProvider?.Dispose();
+                this.OwnedServiceProvider = null;
             }
 
             this.Disposed = true;

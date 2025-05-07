@@ -12,15 +12,16 @@ using OpenTelemetryProtocol::OpenTelemetry.Exporter;
 using OpenTelemetryProtocol::OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
 using OpenTelemetryProtocol::OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient;
 using OpenTelemetryProtocol::OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Transmission;
-using OpenTelemetryProtocol::OpenTelemetry.Proto.Collector.Trace.V1;
 
 namespace Benchmarks.Exporter;
 
+#pragma warning disable CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 public class OtlpGrpcExporterBenchmarks
+#pragma warning restore CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 {
-    private OtlpTraceExporter exporter;
-    private Activity activity;
-    private CircularBuffer<Activity> activityBatch;
+    private OtlpTraceExporter? exporter;
+    private Activity? activity;
+    private CircularBuffer<Activity>? activityBatch;
 
     [Params(1, 10, 100)]
     public int NumberOfBatches { get; set; }
@@ -36,7 +37,9 @@ public class OtlpGrpcExporterBenchmarks
             options,
             new SdkLimitOptions(),
             new ExperimentalOptions(),
-            new OtlpExporterTransmissionHandler<ExportTraceServiceRequest>(new OtlpGrpcTraceExportClient(options, new TestTraceServiceClient()), options.TimeoutMilliseconds));
+#pragma warning disable CA2000 // Dispose objects before losing scope
+            new OtlpExporterTransmissionHandler(new OtlpGrpcExportClient(options, options.HttpClientFactory(), "opentelemetry.proto.collector.trace.v1.TraceService/Export"), options.TimeoutMilliseconds));
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         this.activity = ActivityHelper.CreateTestActivity();
         this.activityBatch = new CircularBuffer<Activity>(this.NumberOfSpans);
@@ -45,8 +48,9 @@ public class OtlpGrpcExporterBenchmarks
     [GlobalCleanup]
     public void GlobalCleanup()
     {
-        this.exporter.Shutdown();
-        this.exporter.Dispose();
+        this.activity?.Dispose();
+        this.exporter?.Shutdown();
+        this.exporter?.Dispose();
     }
 
     [Benchmark]
@@ -56,10 +60,10 @@ public class OtlpGrpcExporterBenchmarks
         {
             for (int c = 0; c < this.NumberOfSpans; c++)
             {
-                this.activityBatch.Add(this.activity);
+                this.activityBatch!.Add(this.activity!);
             }
 
-            this.exporter.Export(new Batch<Activity>(this.activityBatch, this.NumberOfSpans));
+            this.exporter!.Export(new Batch<Activity>(this.activityBatch!, this.NumberOfSpans));
         }
     }
 }

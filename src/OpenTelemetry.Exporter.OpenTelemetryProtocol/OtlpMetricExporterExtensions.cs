@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -170,14 +168,27 @@ public static class OtlpMetricExporterExtensions
         Debug.Assert(metricReaderOptions != null, "metricReaderOptions was null");
         Debug.Assert(experimentalOptions != null, "experimentalOptions was null");
 
+#if NET462_OR_GREATER || NETSTANDARD2_0
+#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
+        if (exporterOptions!.Protocol == OtlpExportProtocol.Grpc &&
+            ReferenceEquals(exporterOptions.HttpClientFactory, exporterOptions.DefaultHttpClientFactory))
+#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
+        {
+            throw new NotSupportedException("OtlpExportProtocol.Grpc with the default HTTP client factory is not supported on .NET Framework or .NET Standard 2.0." +
+                "Please switch to OtlpExportProtocol.HttpProtobuf or provide a custom HttpClientFactory.");
+        }
+#endif
+
         if (!skipUseOtlpExporterRegistrationCheck)
         {
-            serviceProvider.EnsureNoUseOtlpExporterRegistrations();
+            serviceProvider!.EnsureNoUseOtlpExporterRegistrations();
         }
 
-        exporterOptions.TryEnableIHttpClientFactoryIntegration(serviceProvider, "OtlpMetricExporter");
+        exporterOptions!.TryEnableIHttpClientFactoryIntegration(serviceProvider!, "OtlpMetricExporter");
 
-        BaseExporter<Metric> metricExporter = new OtlpMetricExporter(exporterOptions, experimentalOptions);
+#pragma warning disable CA2000 // Dispose objects before losing scope
+        BaseExporter<Metric> metricExporter = new OtlpMetricExporter(exporterOptions!, experimentalOptions!);
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
         if (configureExporterInstance != null)
         {

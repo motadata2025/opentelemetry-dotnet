@@ -5,19 +5,22 @@ using Xunit;
 
 namespace OpenTelemetry.Tests;
 
-internal class SkipUnlessEnvVarFoundFactAttribute : FactAttribute
+internal sealed class SkipUnlessEnvVarFoundFactAttribute : FactAttribute
 {
     public SkipUnlessEnvVarFoundFactAttribute(string environmentVariable)
     {
+        this.EnvironmentVariable = environmentVariable;
         if (string.IsNullOrEmpty(GetEnvironmentVariable(environmentVariable)))
         {
             this.Skip = $"Skipped because {environmentVariable} environment variable was not configured.";
         }
     }
 
-    public static string GetEnvironmentVariable(string environmentVariableName)
+    public string EnvironmentVariable { get; }
+
+    public static string? GetEnvironmentVariable(string environmentVariableName)
     {
-        string environmentVariableValue = Environment.GetEnvironmentVariable(environmentVariableName, EnvironmentVariableTarget.Process);
+        string? environmentVariableValue = Environment.GetEnvironmentVariable(environmentVariableName, EnvironmentVariableTarget.Process);
 
         if (string.IsNullOrEmpty(environmentVariableValue))
         {

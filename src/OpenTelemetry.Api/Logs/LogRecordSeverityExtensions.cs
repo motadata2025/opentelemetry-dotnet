@@ -1,9 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
-#if NET8_0_OR_GREATER && EXPOSE_EXPERIMENTAL_FEATURES
+#if NET && EXPOSE_EXPERIMENTAL_FEATURES
 using System.Diagnostics.CodeAnalysis;
 using OpenTelemetry.Internal;
 #endif
@@ -15,7 +13,7 @@ namespace OpenTelemetry.Logs;
 /// Contains extension methods for the <see cref="LogRecordSeverity"/> enum.
 /// </summary>
 /// <remarks><inheritdoc cref="Logger" path="/remarks"/></remarks>
-#if NET8_0_OR_GREATER
+#if NET
 [Experimental(DiagnosticDefinitions.LogsBridgeExperimentalApi, UrlFormat = DiagnosticDefinitions.ExperimentalApiUrlFormat)]
 #endif
 public
@@ -59,8 +57,8 @@ internal
     internal const string Fatal3ShortName = FatalShortName + "3";
     internal const string Fatal4ShortName = FatalShortName + "4";
 
-    private static readonly string[] LogRecordSeverityShortNames = new string[]
-    {
+    private static readonly string[] LogRecordSeverityShortNames =
+    [
         UnspecifiedShortName,
 
         TraceShortName,
@@ -91,8 +89,8 @@ internal
         FatalShortName,
         Fatal2ShortName,
         Fatal3ShortName,
-        Fatal4ShortName,
-    };
+        Fatal4ShortName
+    ];
 
     /// <summary>
     /// Returns the OpenTelemetry Specification short name for the <see

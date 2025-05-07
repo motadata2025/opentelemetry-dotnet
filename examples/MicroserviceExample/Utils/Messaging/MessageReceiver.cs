@@ -11,7 +11,7 @@ using RabbitMQ.Client.Events;
 
 namespace Utils.Messaging;
 
-public class MessageReceiver : IDisposable
+public sealed class MessageReceiver : IDisposable
 {
     private static readonly ActivitySource ActivitySource = new(nameof(MessageReceiver));
     private static readonly TextMapPropagator Propagator = Propagators.DefaultTextMapPropagator;
@@ -40,6 +40,8 @@ public class MessageReceiver : IDisposable
 
     public void ReceiveMessage(BasicDeliverEventArgs ea)
     {
+        ArgumentNullException.ThrowIfNull(ea);
+
         // Extract the PropagationContext of the upstream parent from the message headers.
         var parentContext = Propagator.Extract(default, ea.BasicProperties, this.ExtractTraceContextFromBasicProperties);
         Baggage.Current = parentContext.Baggage;
@@ -53,7 +55,7 @@ public class MessageReceiver : IDisposable
         {
             var message = Encoding.UTF8.GetString(ea.Body.Span.ToArray());
 
-            this.logger.LogInformation($"Message received: [{message}]");
+            this.logger.MessageReceived(message);
 
             activity?.SetTag("message", message);
 
@@ -65,7 +67,7 @@ public class MessageReceiver : IDisposable
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex, "Message processing failed.");
+            this.logger.MessageProcessingFailed(ex);
         }
     }
 
@@ -75,15 +77,15 @@ public class MessageReceiver : IDisposable
         {
             if (props.Headers.TryGetValue(key, out var value))
             {
-                var bytes = value as byte[];
-                return new[] { Encoding.UTF8.GetString(bytes) };
+                var bytes = (byte[])value;
+                return [Encoding.UTF8.GetString(bytes)];
             }
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex, "Failed to extract trace context.");
+            this.logger.FailedToExtractTraceContext(ex);
         }
 
-        return Enumerable.Empty<string>();
+        return [];
     }
 }

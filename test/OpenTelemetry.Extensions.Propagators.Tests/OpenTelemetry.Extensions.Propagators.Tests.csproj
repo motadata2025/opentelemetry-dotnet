@@ -2,8 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(TargetFrameworksForTests)</TargetFrameworks>
-    <!-- this is temporary. will remove in future PR. -->
-    <Nullable>disable</Nullable>
+    <AnalysisLevel>latest-all</AnalysisLevel>
   </PropertyGroup>
 
   <ItemGroup>

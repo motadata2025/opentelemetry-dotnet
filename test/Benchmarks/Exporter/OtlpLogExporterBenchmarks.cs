@@ -16,7 +16,7 @@ using OpenTelemetry.Internal;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Tests;
 using OpenTelemetryProtocol::OpenTelemetry.Exporter;
-using OtlpCollector = OpenTelemetryProtocol::OpenTelemetry.Proto.Collector.Logs.V1;
+using OtlpCollector = OpenTelemetry.Proto.Collector.Logs.V1;
 
 /*
 BenchmarkDotNet v0.13.6, Windows 11 (10.0.22621.2134/22H2/2022Update/SunValley2) (Hyper-V)
@@ -34,15 +34,17 @@ AMD EPYC 7763, 1 CPU, 16 logical and 8 physical cores
 
 namespace Benchmarks.Exporter;
 
+#pragma warning disable CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 public class OtlpLogExporterBenchmarks
+#pragma warning restore CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 {
-    private OtlpLogExporter exporter;
-    private LogRecord logRecord;
-    private CircularBuffer<LogRecord> logRecordBatch;
+    private OtlpLogExporter? exporter;
+    private LogRecord? logRecord;
+    private CircularBuffer<LogRecord>? logRecordBatch;
 
-    private IHost host;
-    private IDisposable server;
-    private string serverHost;
+    private IHost? host;
+    private IDisposable? server;
+    private string? serverHost;
     private int serverPort;
 
     [GlobalSetup(Target = nameof(OtlpLogExporter_Grpc))]
@@ -103,38 +105,40 @@ public class OtlpLogExporterBenchmarks
     [GlobalCleanup(Target = nameof(OtlpLogExporter_Grpc))]
     public void GlobalCleanupGrpc()
     {
-        this.exporter.Shutdown();
-        this.exporter.Dispose();
-        this.host.Dispose();
+        this.exporter?.Shutdown();
+        this.exporter?.Dispose();
+        this.host?.Dispose();
     }
 
     [GlobalCleanup(Target = nameof(OtlpLogExporter_Http))]
     public void GlobalCleanupHttp()
     {
-        this.exporter.Shutdown();
-        this.exporter.Dispose();
-        this.server.Dispose();
+        this.exporter?.Shutdown();
+        this.exporter?.Dispose();
+        this.server?.Dispose();
     }
 
     [Benchmark]
     public void OtlpLogExporter_Http()
     {
-        this.exporter.Export(new Batch<LogRecord>(this.logRecordBatch, 1));
+        this.exporter!.Export(new Batch<LogRecord>(this.logRecordBatch!, 1));
     }
 
     [Benchmark]
     public void OtlpLogExporter_Grpc()
     {
-        this.exporter.Export(new Batch<LogRecord>(this.logRecordBatch, 1));
+        this.exporter!.Export(new Batch<LogRecord>(this.logRecordBatch!, 1));
     }
 
+#pragma warning disable CA1812 // Avoid uninstantiated internal classes
     private sealed class MockLogService : OtlpCollector.LogsService.LogsServiceBase
+#pragma warning restore CA1812 // Avoid uninstantiated internal classes
     {
-        private static OtlpCollector.ExportLogsServiceResponse response = new OtlpCollector.ExportLogsServiceResponse();
+        private static readonly OtlpCollector.ExportLogsServiceResponse Response = new();
 
         public override Task<OtlpCollector.ExportLogsServiceResponse> Export(OtlpCollector.ExportLogsServiceRequest request, ServerCallContext context)
         {
-            return Task.FromResult(response);
+            return Task.FromResult(Response);
         }
     }
 }

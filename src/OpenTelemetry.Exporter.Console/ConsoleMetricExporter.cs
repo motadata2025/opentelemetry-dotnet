@@ -10,8 +10,6 @@ namespace OpenTelemetry.Exporter;
 
 public class ConsoleMetricExporter : ConsoleExporter<Metric>
 {
-    private Resource resource;
-
     public ConsoleMetricExporter(ConsoleExporterOptions options)
         : base(options)
     {
@@ -19,60 +17,33 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
 
     public override ExportResult Export(in Batch<Metric> batch)
     {
-        if (this.resource == null)
-        {
-            this.resource = this.ParentProvider.GetResource();
-            if (this.resource != Resource.Empty)
-            {
-                this.WriteLine("Resource associated with Metric:");
-                foreach (var resourceAttribute in this.resource.Attributes)
-                {
-                    if (this.TagWriter.TryTransformTag(resourceAttribute, out var result))
-                    {
-                        this.WriteLine($"    {result.Key}: {result.Value}");
-                    }
-                }
-            }
-        }
-
         foreach (var metric in batch)
         {
-            var msg = new StringBuilder($"\n");
+            var msg = new StringBuilder(Environment.NewLine);
+#if NET
+            msg.Append(CultureInfo.InvariantCulture, $"Metric Name: {metric.Name}");
+#else
             msg.Append($"Metric Name: {metric.Name}");
-            if (metric.Description != string.Empty)
+#endif
+            if (string.IsNullOrEmpty(metric.Description))
             {
-                msg.Append(", ");
-                msg.Append(metric.Description);
+#if NET
+                msg.Append(CultureInfo.InvariantCulture, $", Description: {metric.Description}");
+#else
+                msg.Append($", Description: {metric.Description}");
+#endif
             }
 
-            if (metric.Unit != string.Empty)
+            if (string.IsNullOrEmpty(metric.Unit))
             {
+#if NET
+                msg.Append(CultureInfo.InvariantCulture, $", Unit: {metric.Unit}");
+#else
                 msg.Append($", Unit: {metric.Unit}");
-            }
-
-            if (!string.IsNullOrEmpty(metric.MeterName))
-            {
-                msg.Append($", Meter: {metric.MeterName}");
-
-                if (!string.IsNullOrEmpty(metric.MeterVersion))
-                {
-                    msg.Append($"/{metric.MeterVersion}");
-                }
+#endif
             }
 
             this.WriteLine(msg.ToString());
-
-            if (metric.MeterTags != null)
-            {
-                foreach (var meterTag in metric.MeterTags)
-                {
-                    this.WriteLine("\tMeter Tags:");
-                    if (this.TagWriter.TryTransformTag(meterTag, out var result))
-                    {
-                        this.WriteLine($"\t\t{result.Key}: {result.Value}");
-                    }
-                }
-            }
 
             foreach (ref readonly var metricPoint in metric.GetMetricPoints())
             {
@@ -82,7 +53,11 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
                 {
                     if (this.TagWriter.TryTransformTag(tag, out var result))
                     {
+#if NET
+                        tagsBuilder.Append(CultureInfo.InvariantCulture, $"{result.Key}: {result.Value}");
+#else
                         tagsBuilder.Append($"{result.Key}: {result.Value}");
+#endif
                         tagsBuilder.Append(' ');
                     }
                 }
@@ -96,10 +71,18 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
                     var bucketsBuilder = new StringBuilder();
                     var sum = metricPoint.GetHistogramSum();
                     var count = metricPoint.GetHistogramCount();
+#if NET
+                    bucketsBuilder.Append(CultureInfo.InvariantCulture, $"Sum: {sum} Count: {count} ");
+#else
                     bucketsBuilder.Append($"Sum: {sum} Count: {count} ");
+#endif
                     if (metricPoint.TryGetHistogramMinMaxValues(out double min, out double max))
                     {
+#if NET
+                        bucketsBuilder.Append(CultureInfo.InvariantCulture, $"Min: {min} Max: {max} ");
+#else
                         bucketsBuilder.Append($"Min: {min} Max: {max} ");
+#endif
                     }
 
                     bucketsBuilder.AppendLine();
@@ -150,7 +133,11 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
 
                         if (exponentialHistogramData.ZeroCount != 0)
                         {
+#if NET
+                            bucketsBuilder.AppendLine(CultureInfo.InvariantCulture, $"Zero Bucket:{exponentialHistogramData.ZeroCount}");
+#else
                             bucketsBuilder.AppendLine($"Zero Bucket:{exponentialHistogramData.ZeroCount}");
+#endif
                         }
 
                         var offset = exponentialHistogramData.PositiveBuckets.Offset;
@@ -158,7 +145,11 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
                         {
                             var lowerBound = Base2ExponentialBucketHistogramHelper.CalculateLowerBoundary(offset, scale).ToString(CultureInfo.InvariantCulture);
                             var upperBound = Base2ExponentialBucketHistogramHelper.CalculateLowerBoundary(++offset, scale).ToString(CultureInfo.InvariantCulture);
+#if NET
+                            bucketsBuilder.AppendLine(CultureInfo.InvariantCulture, $"({lowerBound}, {upperBound}]:{bucketCount}");
+#else
                             bucketsBuilder.AppendLine($"({lowerBound}, {upperBound}]:{bucketCount}");
+#endif
                         }
                     }
 
@@ -166,25 +157,11 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
                 }
                 else if (metricType.IsDouble())
                 {
-                    if (metricType.IsSum())
-                    {
-                        valueDisplay = metricPoint.GetSumDouble().ToString(CultureInfo.InvariantCulture);
-                    }
-                    else
-                    {
-                        valueDisplay = metricPoint.GetGaugeLastValueDouble().ToString(CultureInfo.InvariantCulture);
-                    }
+                    valueDisplay = metricType.IsSum() ? metricPoint.GetSumDouble().ToString(CultureInfo.InvariantCulture) : metricPoint.GetGaugeLastValueDouble().ToString(CultureInfo.InvariantCulture);
                 }
                 else if (metricType.IsLong())
                 {
-                    if (metricType.IsSum())
-                    {
-                        valueDisplay = metricPoint.GetSumLong().ToString(CultureInfo.InvariantCulture);
-                    }
-                    else
-                    {
-                        valueDisplay = metricPoint.GetGaugeLastValueLong().ToString(CultureInfo.InvariantCulture);
-                    }
+                    valueDisplay = metricType.IsSum() ? metricPoint.GetSumLong().ToString(CultureInfo.InvariantCulture) : metricPoint.GetGaugeLastValueLong().ToString(CultureInfo.InvariantCulture);
                 }
 
                 var exemplarString = new StringBuilder();
@@ -220,11 +197,15 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
                             {
                                 if (!appendedTagString)
                                 {
-                                    exemplarString.Append(" Filtered Tags : ");
+                                    exemplarString.Append(" Filtered Tags: ");
                                     appendedTagString = true;
                                 }
 
+#if NET
+                                exemplarString.Append(CultureInfo.InvariantCulture, $"{result.Key}: {result.Value}");
+#else
                                 exemplarString.Append($"{result.Key}: {result.Value}");
+#endif
                                 exemplarString.Append(' ');
                             }
                         }
@@ -240,23 +221,59 @@ public class ConsoleMetricExporter : ConsoleExporter<Metric>
                 msg.Append(metricPoint.EndTime.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture));
                 msg.Append("] ");
                 msg.Append(tags);
-                if (tags != string.Empty)
+                if (string.IsNullOrEmpty(tags))
                 {
                     msg.Append(' ');
                 }
 
                 msg.Append(metric.MetricType);
                 msg.AppendLine();
+#if NET
+                msg.Append(CultureInfo.InvariantCulture, $"Value: {valueDisplay}");
+#else
                 msg.Append($"Value: {valueDisplay}");
+#endif
 
                 if (exemplarString.Length > 0)
                 {
                     msg.AppendLine();
                     msg.AppendLine("Exemplars");
-                    msg.Append(exemplarString.ToString());
+                    msg.Append(exemplarString);
                 }
 
                 this.WriteLine(msg.ToString());
+
+                this.WriteLine("Instrumentation scope (Meter):");
+                this.WriteLine($"\tName: {metric.MeterName}");
+                if (!string.IsNullOrEmpty(metric.MeterVersion))
+                {
+                    this.WriteLine($"\tVersion: {metric.MeterVersion}");
+                }
+
+                if (metric.MeterTags?.Any() == true)
+                {
+                    this.WriteLine("\tTags:");
+                    foreach (var meterTag in metric.MeterTags)
+                    {
+                        if (this.TagWriter.TryTransformTag(meterTag, out var result))
+                        {
+                            this.WriteLine($"\t\t{result.Key}: {result.Value}");
+                        }
+                    }
+                }
+
+                var resource = this.ParentProvider.GetResource();
+                if (resource != Resource.Empty)
+                {
+                    this.WriteLine("Resource associated with Metric:");
+                    foreach (var resourceAttribute in resource.Attributes)
+                    {
+                        if (this.TagWriter.TryTransformTag(resourceAttribute.Key, resourceAttribute.Value, out var result))
+                        {
+                            this.WriteLine($"\t{result.Key}: {result.Value}");
+                        }
+                    }
+                }
             }
         }
 

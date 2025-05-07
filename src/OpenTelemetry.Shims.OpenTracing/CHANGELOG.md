@@ -1,6 +1,43 @@
 # Changelog
 
+This file contains individual changes for the OpenTelemetry.Shims.OpenTracing
+package. For highlights and announcements covering all components see: [Release
+Notes](../../RELEASENOTES.md).
+
 ## Unreleased
+
+## 1.11.2-beta.1
+
+Released 2025-Mar-05
+
+* Updated OpenTelemetry core component version(s) to `1.11.2`.
+  ([#6169](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6169))
+
+## 1.11.0-beta.1
+
+Released 2025-Jan-16
+
+* Updated OpenTelemetry core component version(s) to `1.11.0`.
+  ([#6064](https://github.com/open-telemetry/opentelemetry-dotnet/pull/6064))
+
+## 1.10.0-beta.1
+
+Released 2024-Nov-12
+
+* Fixed an issue causing all tag values added via the `ISpanBuilder` API to be
+  converted to strings on the `ISpan` started from the builder.
+  ([#5797](https://github.com/open-telemetry/opentelemetry-dotnet/pull/5797))
+
+* Updated OpenTelemetry core component version(s) to `1.10.0`.
+  ([#5970](https://github.com/open-telemetry/opentelemetry-dotnet/pull/5970))
+
+## 1.9.0-beta.2
+
+Released 2024-Jun-24
+
+## 1.9.0-beta.1
+
+Released 2024-Jun-14
 
 ## 1.9.0-alpha.2
 
@@ -26,6 +63,7 @@ Released 2023-Sep-05
 * Fix: Do not raise `ArgumentException` if `Activity` behind the shim span
   has an invalid context.
   ([#2787](https://github.com/open-telemetry/opentelemetry-dotnet/issues/2787))
+
 * Obsolete `TracerShim(Tracer, TextMapPropagator)` constructor.
   Provide `TracerShim(TracerProvider)`
   and `TracerShim(TracerProvider, TextMapPropagator)` constructors.

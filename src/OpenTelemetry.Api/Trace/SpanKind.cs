@@ -1,14 +1,14 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 namespace OpenTelemetry.Trace;
 
 /// <summary>
 /// Span kind.
 /// </summary>
+#pragma warning disable CA1008 // Enums should have zero value
 public enum SpanKind
+#pragma warning restore CA1008 // Enums should have zero value
 {
     /// <summary>
     /// Span kind was not specified.

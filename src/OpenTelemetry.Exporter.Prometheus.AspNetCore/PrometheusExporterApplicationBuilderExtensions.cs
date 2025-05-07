@@ -93,12 +93,14 @@ public static class PrometheusExporterApplicationBuilderExtensions
     /// cref="IApplicationBuilder"/> for chaining calls.</returns>
     public static IApplicationBuilder UseOpenTelemetryPrometheusScrapingEndpoint(
         this IApplicationBuilder app,
-        MeterProvider meterProvider,
-        Func<HttpContext, bool> predicate,
-        string path,
-        Action<IApplicationBuilder> configureBranchedPipeline,
-        string optionsName)
+        MeterProvider? meterProvider,
+        Func<HttpContext, bool>? predicate,
+        string? path,
+        Action<IApplicationBuilder>? configureBranchedPipeline,
+        string? optionsName)
     {
+        Guard.ThrowIfNull(app);
+
         // Note: Order is important here. MeterProvider is accessed before
         // GetOptions<PrometheusAspNetCoreOptions> so that any changes made to
         // PrometheusAspNetCoreOptions in deferred AddPrometheusExporter
@@ -114,7 +116,7 @@ public static class PrometheusExporterApplicationBuilderExtensions
                 path = options.ScrapeEndpointPath ?? PrometheusAspNetCoreOptions.DefaultScrapeEndpointPath;
             }
 
-            if (!path.StartsWith("/"))
+            if (!path.StartsWith('/'))
             {
                 path = $"/{path}";
             }

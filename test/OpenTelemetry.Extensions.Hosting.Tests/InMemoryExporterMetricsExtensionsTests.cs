@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if NET6_0_OR_GREATER
+#if NET
 
 using System.Diagnostics.Metrics;
 using System.Net;
@@ -85,7 +85,7 @@ public class InMemoryExporterMetricsExtensionsTests
                })))
            .StartAsync();
 
-        using var response = await host.GetTestClient().GetAsync($"/{nameof(RunMetricsTest)}");
+        using var response = await host.GetTestClient().GetAsync(new Uri($"/{nameof(RunMetricsTest)}", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#nullable enable
-
 using Xunit;
 
 namespace OpenTelemetry.Logs.Tests;
@@ -172,7 +170,7 @@ public sealed class LogRecordSharedPoolTests
 
         using BatchLogRecordExportProcessor processor = new(new NoopExporter());
 
-        List<Task> tasks = new();
+        List<Task> tasks = [];
 
         for (int i = 0; i < Environment.ProcessorCount; i++)
         {
@@ -232,7 +230,7 @@ public sealed class LogRecordSharedPoolTests
 
         var pool = LogRecordSharedPool.Current;
 
-        List<Task> tasks = new();
+        List<Task> tasks = [];
 
         for (int i = 0; i < Environment.ProcessorCount; i++)
         {
