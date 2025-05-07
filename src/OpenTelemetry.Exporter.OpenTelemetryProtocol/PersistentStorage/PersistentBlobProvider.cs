@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics.CodeAnalysis;
 
 namespace OpenTelemetry.PersistentStorage.Abstractions;
@@ -102,12 +104,12 @@ public abstract class PersistentBlobProvider
     {
         try
         {
-            return this.OnGetBlobs() ?? [];
+            return this.OnGetBlobs() ?? Enumerable.Empty<PersistentBlob>();
         }
         catch (Exception ex)
         {
             PersistentStorageAbstractionsEventSource.Log.PersistentStorageAbstractionsException(nameof(PersistentBlobProvider), "Failed to get all the blobs", ex);
-            return [];
+            return Enumerable.Empty<PersistentBlob>();
         }
     }
 

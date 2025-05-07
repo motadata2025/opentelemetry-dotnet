@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 namespace OpenTelemetry.PersistentStorage.FileSystem;
 
 /// <summary>
@@ -56,16 +58,16 @@ internal sealed class DirectorySizeTracker
         long directorySize = 0;
         try
         {
-            foreach (var file in Directory.EnumerateFiles(path))
+            foreach (string file in Directory.EnumerateFiles(path))
             {
                 if (File.Exists(file))
                 {
-                    var fileInfo = new FileInfo(file);
+                    FileInfo fileInfo = new FileInfo(file);
                     directorySize += fileInfo.Length;
                 }
             }
 
-            foreach (var dir in Directory.GetDirectories(path))
+            foreach (string dir in Directory.GetDirectories(path))
             {
                 directorySize += CalculateFolderSize(dir);
             }

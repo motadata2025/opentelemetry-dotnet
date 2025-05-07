@@ -1,7 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Diagnostics;
 using OpenTelemetry.Internal;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -14,7 +13,9 @@ namespace OpenTelemetry.Exporter.Prometheus;
 [ExportModes(ExportModes.Pull)]
 internal sealed class PrometheusExporter : BaseExporter<Metric>, IPullMetricExporter
 {
-    private Resource? resource;
+    private Func<int, bool> funcCollect;
+    private Func<Batch<Metric>, ExportResult> funcExport;
+    private Resource resource;
     private bool disposed;
 
     /// <summary>
@@ -31,16 +32,22 @@ internal sealed class PrometheusExporter : BaseExporter<Metric>, IPullMetricExpo
         this.CollectionManager = new PrometheusCollectionManager(this);
     }
 
-    public delegate ExportResult ExportFunc(in Batch<Metric> batch);
-
     /// <summary>
     /// Gets or sets the Collect delegate.
     /// </summary>
-    public Func<int, bool>? Collect { get; set; }
+    public Func<int, bool> Collect
+    {
+        get => this.funcCollect;
+        set => this.funcCollect = value;
+    }
 
-    internal ExportFunc? OnExport { get; set; }
+    internal Func<Batch<Metric>, ExportResult> OnExport
+    {
+        get => this.funcExport;
+        set => this.funcExport = value;
+    }
 
-    internal Action? OnDispose { get; set; }
+    internal Action OnDispose { get; set; }
 
     internal PrometheusCollectionManager CollectionManager { get; }
 
@@ -55,9 +62,7 @@ internal sealed class PrometheusExporter : BaseExporter<Metric>, IPullMetricExpo
     /// <inheritdoc/>
     public override ExportResult Export(in Batch<Metric> metrics)
     {
-        Debug.Assert(this.OnExport != null, "this.OnExport was null");
-
-        return this.OnExport!(in metrics);
+        return this.OnExport(metrics);
     }
 
     /// <inheritdoc/>

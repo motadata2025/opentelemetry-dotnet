@@ -3,7 +3,7 @@
 
 namespace OpenTelemetry.Tests;
 
-internal sealed class DelegatingProcessor<T> : BaseProcessor<T>
+public class DelegatingProcessor<T> : BaseProcessor<T>
     where T : class
 {
     public Func<int, bool> OnForceFlushFunc { get; set; } = (timeout) => true;

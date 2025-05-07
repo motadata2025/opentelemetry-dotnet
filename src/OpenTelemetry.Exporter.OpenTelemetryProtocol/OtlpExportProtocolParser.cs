@@ -10,9 +10,7 @@ internal static class OtlpExportProtocolParser
         switch (value?.Trim())
         {
             case "grpc":
-#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
                 result = OtlpExportProtocol.Grpc;
-#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
                 return true;
             case "http/protobuf":
                 result = OtlpExportProtocol.HttpProtobuf;

@@ -12,14 +12,19 @@ public static class RabbitMqHelper
     public const string DefaultExchangeName = "";
     public const string TestQueueName = "TestQueue";
 
-    private static readonly ConnectionFactory ConnectionFactory = new()
+    private static readonly ConnectionFactory ConnectionFactory;
+
+    static RabbitMqHelper()
     {
-        HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOSTNAME") ?? "localhost",
-        UserName = Environment.GetEnvironmentVariable("RABBITMQ_DEFAULT_USER") ?? "guest",
-        Password = Environment.GetEnvironmentVariable("RABBITMQ_DEFAULT_PASS") ?? "guest",
-        Port = 5672,
-        RequestedConnectionTimeout = TimeSpan.FromMilliseconds(3000),
-    };
+        ConnectionFactory = new ConnectionFactory()
+        {
+            HostName = Environment.GetEnvironmentVariable("RABBITMQ_HOSTNAME") ?? "localhost",
+            UserName = Environment.GetEnvironmentVariable("RABBITMQ_DEFAULT_USER") ?? "guest",
+            Password = Environment.GetEnvironmentVariable("RABBITMQ_DEFAULT_PASS") ?? "guest",
+            Port = 5672,
+            RequestedConnectionTimeout = TimeSpan.FromMilliseconds(3000),
+        };
+    }
 
     public static IConnection CreateConnection()
     {
@@ -28,8 +33,6 @@ public static class RabbitMqHelper
 
     public static IModel CreateModelAndDeclareTestQueue(IConnection connection)
     {
-        ArgumentNullException.ThrowIfNull(connection);
-
         var channel = connection.CreateModel();
 
         channel.QueueDeclare(
@@ -51,7 +54,7 @@ public static class RabbitMqHelper
         channel.BasicConsume(queue: TestQueueName, autoAck: true, consumer: consumer);
     }
 
-    public static void AddMessagingTags(Activity? activity)
+    public static void AddMessagingTags(Activity activity)
     {
         // These tags are added demonstrating the semantic conventions of the OpenTelemetry messaging specification
         // See:

@@ -23,20 +23,18 @@ Intel Core i7-9700 CPU 3.00GHz, 1 CPU, 8 logical and 8 physical cores
 
 namespace Benchmarks.Metrics;
 
-#pragma warning disable CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 public class MetricCollectBenchmarks
-#pragma warning restore CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 {
-    private readonly string[] dimensionValues = ["DimVal1", "DimVal2", "DimVal3", "DimVal4", "DimVal5", "DimVal6", "DimVal7", "DimVal8", "DimVal9", "DimVal10"];
+    private readonly string[] dimensionValues = new string[] { "DimVal1", "DimVal2", "DimVal3", "DimVal4", "DimVal5", "DimVal6", "DimVal7", "DimVal8", "DimVal9", "DimVal10" };
 
     // TODO: Confirm if this needs to be thread-safe
     private readonly Random random = new();
-    private Counter<double>? counter;
-    private MeterProvider? provider;
-    private Meter? meter;
-    private CancellationTokenSource? token;
-    private BaseExportingMetricReader? reader;
-    private Task? writeMetricTask;
+    private Counter<double> counter;
+    private MeterProvider provider;
+    private Meter meter;
+    private CancellationTokenSource token;
+    private BaseExportingMetricReader reader;
+    private Task writeMetricTask;
 
     [Params(false, true)]
     public bool UseWithRef { get; set; }
@@ -44,9 +42,7 @@ public class MetricCollectBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var metricExporter = new TestExporter<Metric>(ProcessExport);
-#pragma warning restore CA2000 // Dispose objects before losing scope
         void ProcessExport(Batch<Metric> batch)
         {
             double sum = 0;
@@ -90,11 +86,9 @@ public class MetricCollectBenchmarks
         {
             while (!this.token.IsCancellationRequested)
             {
-#pragma warning disable CA5394 // Do not use insecure randomness
-                var tag1 = new KeyValuePair<string, object?>("DimName1", this.dimensionValues[this.random.Next(0, 10)]);
-                var tag2 = new KeyValuePair<string, object?>("DimName2", this.dimensionValues[this.random.Next(0, 10)]);
-                var tag3 = new KeyValuePair<string, object?>("DimName3", this.dimensionValues[this.random.Next(0, 10)]);
-#pragma warning restore CA5394 // Do not use insecure randomness
+                var tag1 = new KeyValuePair<string, object>("DimName1", this.dimensionValues[this.random.Next(0, 10)]);
+                var tag2 = new KeyValuePair<string, object>("DimName2", this.dimensionValues[this.random.Next(0, 10)]);
+                var tag3 = new KeyValuePair<string, object>("DimName3", this.dimensionValues[this.random.Next(0, 10)]);
                 this.counter.Add(100.00, tag1, tag2, tag3);
             }
         });
@@ -104,16 +98,16 @@ public class MetricCollectBenchmarks
     [GlobalCleanup]
     public void Cleanup()
     {
-        this.token?.Cancel();
-        this.token?.Dispose();
-        this.writeMetricTask?.Wait();
-        this.meter?.Dispose();
-        this.provider?.Dispose();
+        this.token.Cancel();
+        this.token.Dispose();
+        this.writeMetricTask.Wait();
+        this.meter.Dispose();
+        this.provider.Dispose();
     }
 
     [Benchmark]
     public void Collect()
     {
-        this.reader!.Collect();
+        this.reader.Collect();
     }
 }

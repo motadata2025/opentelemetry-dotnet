@@ -13,8 +13,10 @@
  example of how that works.
 */
 
+#nullable enable
+
 using System.Diagnostics;
-#if NET
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 #endif
 using Microsoft.Extensions.Configuration;
@@ -25,7 +27,7 @@ namespace Microsoft.Extensions.Options;
 /// Implementation of <see cref="IOptionsFactory{TOptions}"/>.
 /// </summary>
 /// <typeparam name="TOptions">The type of options being requested.</typeparam>
-#if NET
+#if NET6_0_OR_GREATER
 internal sealed class DelegatingOptionsFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TOptions> :
 #else
 internal sealed class DelegatingOptionsFactory<TOptions> :
@@ -64,9 +66,9 @@ internal sealed class DelegatingOptionsFactory<TOptions> :
 
         this.optionsFactoryFunc = optionsFactoryFunc!;
         this.configuration = configuration!;
-        _setups = setups as IConfigureOptions<TOptions>[] ?? setups.ToArray();
-        _postConfigures = postConfigures as IPostConfigureOptions<TOptions>[] ?? postConfigures.ToArray();
-        _validations = validations as IValidateOptions<TOptions>[] ?? validations.ToArray();
+        _setups = setups as IConfigureOptions<TOptions>[] ?? new List<IConfigureOptions<TOptions>>(setups).ToArray();
+        _postConfigures = postConfigures as IPostConfigureOptions<TOptions>[] ?? new List<IPostConfigureOptions<TOptions>>(postConfigures).ToArray();
+        _validations = validations as IValidateOptions<TOptions>[] ?? new List<IValidateOptions<TOptions>>(validations).ToArray();
     }
 
     /// <summary>

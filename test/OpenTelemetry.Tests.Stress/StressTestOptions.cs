@@ -5,9 +5,7 @@ using CommandLine;
 
 namespace OpenTelemetry.Tests.Stress;
 
-#pragma warning disable CA1515 // Consider making public types internal
 public class StressTestOptions
-#pragma warning restore CA1515 // Consider making public types internal
 {
     [Option('c', "concurrency", HelpText = "The concurrency (maximum degree of parallelism) for the stress test. Default value: Environment.ProcessorCount.", Required = false)]
     public int Concurrency { get; set; }

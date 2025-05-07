@@ -8,7 +8,7 @@ namespace OpenTelemetry.Tests;
 /// <summary>
 /// Event listener for testing event sources.
 /// </summary>
-internal sealed class TestEventListener : EventListener
+internal class TestEventListener : EventListener
 {
     /// <summary>Unique Id used to identify events from the test thread.</summary>
     private readonly Guid activityId;
@@ -29,7 +29,7 @@ internal sealed class TestEventListener : EventListener
         this.activityId = Guid.NewGuid();
         EventSource.SetCurrentThreadActivityId(this.activityId);
 
-        this.events = [];
+        this.events = new List<EventWrittenEventArgs>();
         this.eventWritten = new AutoResetEvent(false);
         this.OnOnEventWritten = e =>
         {
@@ -39,7 +39,7 @@ internal sealed class TestEventListener : EventListener
     }
 
     /// <summary>Gets or sets the handler for event source creation.</summary>
-    public Action<EventSource>? OnOnEventSourceCreated { get; set; }
+    public Action<EventSource> OnOnEventSourceCreated { get; set; }
 
     /// <summary>Gets or sets the handler for event source writes.</summary>
     public Action<EventWrittenEventArgs> OnOnEventWritten { get; set; }
@@ -66,12 +66,6 @@ internal sealed class TestEventListener : EventListener
         this.events.Clear();
     }
 
-    public override void Dispose()
-    {
-        this.eventWritten.Dispose();
-        base.Dispose();
-    }
-
     /// <summary>Handler for event source writes.</summary>
     /// <param name="eventData">The event data that was written.</param>
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -87,7 +81,7 @@ internal sealed class TestEventListener : EventListener
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
         // Check for null because this method is called by the base class constructor before we can initialize it
-        Action<EventSource>? callback = this.OnOnEventSourceCreated;
+        Action<EventSource> callback = this.OnOnEventSourceCreated;
         callback?.Invoke(eventSource);
     }
 }

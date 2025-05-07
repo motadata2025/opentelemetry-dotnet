@@ -13,12 +13,11 @@ public class MetricExporterTests
     [InlineData(ExportModes.Pull | ExportModes.Push)]
     public void FlushMetricExporterTest(ExportModes mode)
     {
-        BaseExporter<Metric>? exporter;
+        BaseExporter<Metric> exporter = null;
 
         switch (mode)
         {
             case ExportModes.Push:
-#pragma warning disable CA2000 // Dispose objects before losing scope
                 exporter = new PushOnlyMetricExporter();
                 break;
             case ExportModes.Pull:
@@ -27,12 +26,9 @@ public class MetricExporterTests
             case ExportModes.Pull | ExportModes.Push:
                 exporter = new PushPullMetricExporter();
                 break;
-            default:
-                throw new NotSupportedException($"Export mode '{mode}' is not supported");
         }
 
         var reader = new BaseExportingMetricReader(exporter);
-#pragma warning restore CA2000 // Dispose objects before losing scope
         using var meterProvider = Sdk.CreateMeterProviderBuilder()
             .AddReader(reader)
             .Build();
@@ -46,7 +42,7 @@ public class MetricExporterTests
             case ExportModes.Pull:
                 Assert.False(reader.Collect());
                 Assert.False(meterProvider.ForceFlush());
-                Assert.True((exporter as IPullMetricExporter)?.Collect?.Invoke(-1) ?? false);
+                Assert.True((exporter as IPullMetricExporter).Collect(-1));
                 break;
             case ExportModes.Pull | ExportModes.Push:
                 Assert.True(reader.Collect());
@@ -56,7 +52,7 @@ public class MetricExporterTests
     }
 
     [ExportModes(ExportModes.Push)]
-    private sealed class PushOnlyMetricExporter : BaseExporter<Metric>
+    private class PushOnlyMetricExporter : BaseExporter<Metric>
     {
         public override ExportResult Export(in Batch<Metric> batch)
         {
@@ -65,9 +61,15 @@ public class MetricExporterTests
     }
 
     [ExportModes(ExportModes.Pull)]
-    private sealed class PullOnlyMetricExporter : BaseExporter<Metric>, IPullMetricExporter
+    private class PullOnlyMetricExporter : BaseExporter<Metric>, IPullMetricExporter
     {
-        public Func<int, bool>? Collect { get; set; }
+        private Func<int, bool> funcCollect;
+
+        public Func<int, bool> Collect
+        {
+            get => this.funcCollect;
+            set { this.funcCollect = value; }
+        }
 
         public override ExportResult Export(in Batch<Metric> batch)
         {
@@ -76,7 +78,7 @@ public class MetricExporterTests
     }
 
     [ExportModes(ExportModes.Pull | ExportModes.Push)]
-    private sealed class PushPullMetricExporter : BaseExporter<Metric>
+    private class PushPullMetricExporter : BaseExporter<Metric>
     {
         public override ExportResult Export(in Batch<Metric> batch)
         {

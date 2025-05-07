@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if NET
+#if NET6_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
 #endif
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +26,7 @@ public static class OpenTelemetryDependencyInjectionTracerProviderBuilderExtensi
     /// <param name="tracerProviderBuilder"><see cref="TracerProviderBuilder"/>.</param>
     /// <returns>The supplied <see cref="TracerProviderBuilder"/> for chaining.</returns>
     public static TracerProviderBuilder AddInstrumentation<
-#if NET
+#if NET6_0_OR_GREATER
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
 #endif
     T>(this TracerProviderBuilder tracerProviderBuilder)
@@ -36,7 +36,7 @@ public static class OpenTelemetryDependencyInjectionTracerProviderBuilderExtensi
 
         tracerProviderBuilder.ConfigureBuilder((sp, builder) =>
         {
-            builder.AddInstrumentation(sp.GetRequiredService<T>);
+            builder.AddInstrumentation(() => sp.GetRequiredService<T>());
         });
 
         return tracerProviderBuilder;

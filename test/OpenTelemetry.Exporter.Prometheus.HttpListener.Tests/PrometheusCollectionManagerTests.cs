@@ -31,9 +31,7 @@ public sealed class PrometheusCollectionManagerTests
 #endif
             .Build())
         {
-#pragma warning disable CA2000 // Dispose objects before losing scope
-            if (!provider.TryFindExporter(out PrometheusExporter? exporter))
-#pragma warning restore CA2000 // Dispose objects before losing scope
+            if (!provider.TryFindExporter(out PrometheusExporter exporter))
             {
                 throw new InvalidOperationException("PrometheusExporter could not be found on MeterProvider.");
             }
@@ -42,7 +40,7 @@ public sealed class PrometheusCollectionManagerTests
             var collectFunc = exporter.Collect;
             exporter.Collect = (timeout) =>
             {
-                bool result = collectFunc!(timeout);
+                bool result = collectFunc(timeout);
                 runningCollectCount++;
                 Thread.Sleep(5000);
                 return result;
@@ -62,7 +60,7 @@ public sealed class PrometheusCollectionManagerTests
                         return new Response
                         {
                             CollectionResponse = response,
-                            ViewPayload = openMetricsRequested ? [.. response.OpenMetricsView] : [.. response.PlainTextView],
+                            ViewPayload = openMetricsRequested ? response.OpenMetricsView.ToArray() : response.PlainTextView.ToArray(),
                         };
                     }
                     finally
@@ -112,10 +110,7 @@ public sealed class PrometheusCollectionManagerTests
                 exporter.CollectionManager.ExitCollect();
             }
 
-#pragma warning disable CA1849 // 'Thread.Sleep(int)' synchronously blocks. Use await instead.
-            // Changing to await Task.Delay leads to test instability.
             Thread.Sleep(exporter.ScrapeResponseCacheDurationMilliseconds);
-#pragma warning restore CA1849 // 'Thread.Sleep(int)' synchronously blocks. Use await instead.
 
             counter.Add(100);
 
@@ -123,13 +118,13 @@ public sealed class PrometheusCollectionManagerTests
             {
                 collectTasks[i] = Task.Run(async () =>
                 {
-                    var collectionResponse = await exporter.CollectionManager.EnterCollect(openMetricsRequested);
+                    var response = await exporter.CollectionManager.EnterCollect(openMetricsRequested);
                     try
                     {
                         return new Response
                         {
-                            CollectionResponse = collectionResponse,
-                            ViewPayload = openMetricsRequested ? [.. collectionResponse.OpenMetricsView] : [.. collectionResponse.PlainTextView],
+                            CollectionResponse = response,
+                            ViewPayload = openMetricsRequested ? response.OpenMetricsView.ToArray() : response.PlainTextView.ToArray(),
                         };
                     }
                     finally
@@ -157,10 +152,10 @@ public sealed class PrometheusCollectionManagerTests
         }
     }
 
-    private sealed class Response
+    private class Response
     {
         public PrometheusCollectionManager.CollectionResponse CollectionResponse;
 
-        public byte[]? ViewPayload;
+        public byte[] ViewPayload;
     }
 }

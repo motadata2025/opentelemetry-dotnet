@@ -10,7 +10,7 @@ using RabbitMQ.Client;
 
 namespace Utils.Messaging;
 
-public sealed class MessageSender : IDisposable
+public class MessageSender : IDisposable
 {
     private static readonly ActivitySource ActivitySource = new(nameof(MessageSender));
     private static readonly TextMapPropagator Propagator = Propagators.DefaultTextMapPropagator;
@@ -71,13 +71,13 @@ public sealed class MessageSender : IDisposable
                 basicProperties: props,
                 body: Encoding.UTF8.GetBytes(body));
 
-            this.logger.MessageSent(body);
+            this.logger.LogInformation($"Message sent: [{body}]");
 
             return body;
         }
         catch (Exception ex)
         {
-            this.logger.MessagePublishingFailed(ex);
+            this.logger.LogError(ex, "Message publishing failed.");
             throw;
         }
     }
@@ -86,13 +86,16 @@ public sealed class MessageSender : IDisposable
     {
         try
         {
-            props.Headers ??= new Dictionary<string, object>();
+            if (props.Headers == null)
+            {
+                props.Headers = new Dictionary<string, object>();
+            }
 
             props.Headers[key] = value;
         }
         catch (Exception ex)
         {
-            this.logger.FailedToInjectTraceContext(ex);
+            this.logger.LogError(ex, "Failed to inject trace context.");
         }
     }
 }

@@ -27,7 +27,6 @@ public sealed class B3Propagator : TextMapPropagator
     internal const string UpperTraceId = "0000000000000000";
 
     // Sampled values via the X_B3_SAMPLED header.
-    internal const char SampledValueChar = '1';
     internal const string SampledValue = "1";
 
     // Some old zipkin implementations may send true/false for the sampled header. Only use this for checking incoming values.
@@ -36,7 +35,7 @@ public sealed class B3Propagator : TextMapPropagator
     // "Debug" sampled value.
     internal const string FlagsValue = "1";
 
-    private static readonly HashSet<string> AllFields = [XB3TraceId, XB3SpanId, XB3ParentSpanId, XB3Sampled, XB3Flags];
+    private static readonly HashSet<string> AllFields = new() { XB3TraceId, XB3SpanId, XB3ParentSpanId, XB3Sampled, XB3Flags };
 
     private static readonly HashSet<string> SampledValues = new(StringComparer.Ordinal) { SampledValue, LegacySampledValue };
 
@@ -67,7 +66,7 @@ public sealed class B3Propagator : TextMapPropagator
     /// <inheritdoc/>
     [Obsolete("Use B3Propagator class from OpenTelemetry.Extensions.Propagators namespace, shipped as part of OpenTelemetry.Extensions.Propagators package.")]
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
-    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>?> getter)
+    public override PropagationContext Extract<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>> getter)
 #pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
     {
         if (context.ActivityContext.IsValid())
@@ -131,7 +130,7 @@ public sealed class B3Propagator : TextMapPropagator
             if ((context.ActivityContext.TraceFlags & ActivityTraceFlags.Recorded) != 0)
             {
                 sb.Append(XB3CombinedDelimiter);
-                sb.Append(SampledValueChar);
+                sb.Append(SampledValue);
             }
 
             setter(carrier, XB3Combined, sb.ToString());
@@ -147,7 +146,7 @@ public sealed class B3Propagator : TextMapPropagator
         }
     }
 
-    private static PropagationContext ExtractFromMultipleHeaders<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>?> getter)
+    private static PropagationContext ExtractFromMultipleHeaders<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>> getter)
     {
         try
         {
@@ -180,8 +179,7 @@ public sealed class B3Propagator : TextMapPropagator
             }
 
             var traceOptions = ActivityTraceFlags.None;
-            var xb3Sampled = getter(carrier, XB3Sampled)?.FirstOrDefault();
-            if ((xb3Sampled != null && SampledValues.Contains(xb3Sampled))
+            if (SampledValues.Contains(getter(carrier, XB3Sampled)?.FirstOrDefault())
                 || FlagsValue.Equals(getter(carrier, XB3Flags)?.FirstOrDefault(), StringComparison.Ordinal))
             {
                 traceOptions |= ActivityTraceFlags.Recorded;
@@ -198,7 +196,7 @@ public sealed class B3Propagator : TextMapPropagator
         }
     }
 
-    private static PropagationContext ExtractFromSingleHeader<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>?> getter)
+    private static PropagationContext ExtractFromSingleHeader<T>(PropagationContext context, T carrier, Func<T, string, IEnumerable<string>> getter)
     {
         try
         {
@@ -208,7 +206,7 @@ public sealed class B3Propagator : TextMapPropagator
                 return context;
             }
 
-            var parts = header!.Split(XB3CombinedDelimiter);
+            var parts = header.Split(XB3CombinedDelimiter);
             if (parts.Length < 2 || parts.Length > 4)
             {
                 return context;

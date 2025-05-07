@@ -50,7 +50,7 @@ public sealed class OpenTelemetryLoggerProviderTests
 
         var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<OpenTelemetryLoggerOptions>>();
 
-        using var provider = new OpenTelemetryLoggerProvider(optionsMonitor);
+        var provider = new OpenTelemetryLoggerProvider(optionsMonitor);
 
         // Verify initial set
         Assert.Equal(initialValue, provider.Options.IncludeFormattedMessage);

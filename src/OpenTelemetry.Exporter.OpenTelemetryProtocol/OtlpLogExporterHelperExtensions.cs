@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,9 +58,7 @@ public static class OtlpLogExporterHelperExtensions
 
         var finalOptionsName = name ?? Options.DefaultName;
 
-#pragma warning disable CA1062 // Validate arguments of public methods
         return loggerOptions.AddProcessor(sp =>
-#pragma warning restore CA1062 // Validate arguments of public methods
         {
             var exporterOptions = GetOptions(sp, name, finalOptionsName, OtlpExporterOptions.CreateOtlpExporterOptions);
 
@@ -104,9 +104,7 @@ public static class OtlpLogExporterHelperExtensions
 
         var finalOptionsName = name ?? Options.DefaultName;
 
-#pragma warning disable CA1062 // Validate arguments of public methods
         return loggerOptions.AddProcessor(sp =>
-#pragma warning restore CA1062 // Validate arguments of public methods
         {
             var exporterOptions = GetOptions(sp, name, finalOptionsName, OtlpExporterOptions.CreateOtlpExporterOptions);
 
@@ -288,20 +286,9 @@ public static class OtlpLogExporterHelperExtensions
         Debug.Assert(sdkLimitOptions != null, "sdkLimitOptions was null");
         Debug.Assert(experimentalOptions != null, "experimentalOptions was null");
 
-#if NET462_OR_GREATER || NETSTANDARD2_0
-#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
-        if (exporterOptions!.Protocol == OtlpExportProtocol.Grpc &&
-            ReferenceEquals(exporterOptions.HttpClientFactory, exporterOptions.DefaultHttpClientFactory))
-#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
-        {
-            throw new NotSupportedException("OtlpExportProtocol.Grpc with the default HTTP client factory is not supported on .NET Framework or .NET Standard 2.0." +
-                "Please switch to OtlpExportProtocol.HttpProtobuf or provide a custom HttpClientFactory.");
-        }
-#endif
-
         if (!skipUseOtlpExporterRegistrationCheck)
         {
-            serviceProvider!.EnsureNoUseOtlpExporterRegistrations();
+            serviceProvider.EnsureNoUseOtlpExporterRegistrations();
         }
 
         /*
@@ -320,12 +307,10 @@ public static class OtlpLogExporterHelperExtensions
          * "OtlpLogExporter");
          */
 
-#pragma warning disable CA2000 // Dispose objects before losing scope
         BaseExporter<LogRecord> otlpExporter = new OtlpLogExporter(
             exporterOptions!,
             sdkLimitOptions!,
             experimentalOptions!);
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
         if (configureExporterInstance != null)
         {

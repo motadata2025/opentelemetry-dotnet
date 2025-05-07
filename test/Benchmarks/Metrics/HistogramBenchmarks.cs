@@ -42,17 +42,15 @@ Intel Core i7-9700 CPU 3.00GHz, 1 CPU, 8 logical and 8 physical cores
 
 namespace Benchmarks.Metrics;
 
-#pragma warning disable CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 public class HistogramBenchmarks
-#pragma warning restore CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 {
     private const int MaxValue = 10000;
     private readonly Random random = new();
-    private readonly string[] dimensionValues = ["DimVal1", "DimVal2", "DimVal3", "DimVal4", "DimVal5", "DimVal6", "DimVal7", "DimVal8", "DimVal9", "DimVal10"];
-    private Histogram<long>? histogram;
-    private MeterProvider? meterProvider;
-    private Meter? meter;
-    private double[]? bounds;
+    private readonly string[] dimensionValues = new string[] { "DimVal1", "DimVal2", "DimVal3", "DimVal4", "DimVal5", "DimVal6", "DimVal7", "DimVal8", "DimVal9", "DimVal10" };
+    private Histogram<long> histogram;
+    private MeterProvider meterProvider;
+    private Meter meter;
+    private double[] bounds;
 
     // Note: Values related to `HistogramBuckets.DefaultHistogramCountForBinarySearch`
     [Params(10, 49, 50, 1000)]
@@ -87,30 +85,29 @@ public class HistogramBenchmarks
     public void Cleanup()
     {
         this.meter?.Dispose();
-        this.meterProvider?.Dispose();
+        this.meterProvider.Dispose();
     }
 
     [Benchmark]
     public void HistogramHotPath()
     {
-#pragma warning disable CA5394 // Do not use insecure randomness
-        this.histogram!.Record(this.random.Next(MaxValue));
+        this.histogram.Record(this.random.Next(MaxValue));
     }
 
     [Benchmark]
     public void HistogramWith1LabelHotPath()
     {
-        var tag1 = new KeyValuePair<string, object?>("DimName1", this.dimensionValues[this.random.Next(0, 2)]);
-        this.histogram!.Record(this.random.Next(MaxValue), tag1);
+        var tag1 = new KeyValuePair<string, object>("DimName1", this.dimensionValues[this.random.Next(0, 2)]);
+        this.histogram.Record(this.random.Next(MaxValue), tag1);
     }
 
     [Benchmark]
     public void HistogramWith3LabelsHotPath()
     {
-        var tag1 = new KeyValuePair<string, object?>("DimName1", this.dimensionValues[this.random.Next(0, 10)]);
-        var tag2 = new KeyValuePair<string, object?>("DimName2", this.dimensionValues[this.random.Next(0, 10)]);
-        var tag3 = new KeyValuePair<string, object?>("DimName3", this.dimensionValues[this.random.Next(0, 10)]);
-        this.histogram!.Record(this.random.Next(MaxValue), tag1, tag2, tag3);
+        var tag1 = new KeyValuePair<string, object>("DimName1", this.dimensionValues[this.random.Next(0, 10)]);
+        var tag2 = new KeyValuePair<string, object>("DimName2", this.dimensionValues[this.random.Next(0, 10)]);
+        var tag3 = new KeyValuePair<string, object>("DimName3", this.dimensionValues[this.random.Next(0, 10)]);
+        this.histogram.Record(this.random.Next(MaxValue), tag1, tag2, tag3);
     }
 
     [Benchmark]
@@ -124,7 +121,7 @@ public class HistogramBenchmarks
             { "DimName4", this.dimensionValues[this.random.Next(0, 5)] },
             { "DimName5", this.dimensionValues[this.random.Next(0, 10)] },
         };
-        this.histogram!.Record(this.random.Next(MaxValue), tags);
+        this.histogram.Record(this.random.Next(MaxValue), tags);
     }
 
     [Benchmark]
@@ -140,7 +137,6 @@ public class HistogramBenchmarks
             { "DimName6", this.dimensionValues[this.random.Next(0, 2)] },
             { "DimName7", this.dimensionValues[this.random.Next(0, 1)] },
         };
-        this.histogram!.Record(this.random.Next(MaxValue), tags);
-#pragma warning restore CA5394 // Do not use insecure randomness
+        this.histogram.Record(this.random.Next(MaxValue), tags);
     }
 }

@@ -3,22 +3,31 @@
 
 using OpenTelemetry.Trace;
 using Utils.Messaging;
-using WorkerService;
 
-var builder = Host.CreateApplicationBuilder(args);
+namespace WorkerService;
 
-builder.Services.AddHostedService<Worker>();
-builder.Services.AddSingleton<MessageReceiver>();
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        CreateHostBuilder(args).Build().Run();
+    }
 
-builder.Services.AddOpenTelemetry()
-    .WithTracing(b => b
-        .AddSource(nameof(MessageReceiver))
-        .AddZipkinExporter(o =>
-        {
-            var zipkinHostName = Environment.GetEnvironmentVariable("ZIPKIN_HOSTNAME") ?? "localhost";
-            o.Endpoint = new Uri($"http://{zipkinHostName}:9411/api/v2/spans");
-        }));
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .ConfigureServices((hostContext, services) =>
+            {
+                services.AddHostedService<Worker>();
 
-var app = builder.Build();
+                services.AddSingleton<MessageReceiver>();
 
-app.Run();
+                services.AddOpenTelemetry()
+                    .WithTracing(builder => builder
+                        .AddSource(nameof(MessageReceiver))
+                        .AddZipkinExporter(b =>
+                        {
+                            var zipkinHostName = Environment.GetEnvironmentVariable("ZIPKIN_HOSTNAME") ?? "localhost";
+                            b.Endpoint = new Uri($"http://{zipkinHostName}:9411/api/v2/spans");
+                        }));
+            });
+}

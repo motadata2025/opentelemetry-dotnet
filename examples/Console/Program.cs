@@ -8,7 +8,7 @@ namespace Examples.Console;
 /// <summary>
 /// Main samples entry point.
 /// </summary>
-internal static class Program
+public class Program
 {
     /// <summary>
     /// Main method - invoke this using command line.
@@ -33,16 +33,16 @@ internal static class Program
     {
         Parser.Default.ParseArguments<ZipkinOptions, PrometheusOptions, MetricsOptions, LogsOptions, GrpcNetClientOptions, HttpClientOptions, ConsoleOptions, OpenTelemetryShimOptions, OpenTracingShimOptions, OtlpOptions, InMemoryOptions>(args)
             .MapResult(
-                (ZipkinOptions options) => TestZipkinExporter.Run(options),
-                (PrometheusOptions options) => TestPrometheusExporter.Run(options),
+                (ZipkinOptions options) => TestZipkinExporter.Run(options.Uri),
+                (PrometheusOptions options) => TestPrometheusExporter.Run(options.Port),
                 (MetricsOptions options) => TestMetrics.Run(options),
                 (LogsOptions options) => TestLogs.Run(options),
-                (GrpcNetClientOptions options) => TestGrpcNetClient.Run(options),
-                (HttpClientOptions options) => TestHttpClient.Run(options),
+                (GrpcNetClientOptions options) => TestGrpcNetClient.Run(),
+                (HttpClientOptions options) => TestHttpClient.Run(),
                 (ConsoleOptions options) => TestConsoleExporter.Run(options),
                 (OpenTelemetryShimOptions options) => TestOTelShimWithConsoleExporter.Run(options),
                 (OpenTracingShimOptions options) => TestOpenTracingShim.Run(options),
-                (OtlpOptions options) => TestOtlpExporter.Run(options),
+                (OtlpOptions options) => TestOtlpExporter.Run(options.Endpoint, options.Protocol),
                 (InMemoryOptions options) => TestInMemoryExporter.Run(options),
                 errs => 1);
     }
@@ -51,21 +51,21 @@ internal static class Program
 #pragma warning disable SA1402 // File may only contain a single type
 
 [Verb("zipkin", HelpText = "Specify the options required to test Zipkin exporter")]
-internal sealed class ZipkinOptions
+internal class ZipkinOptions
 {
     [Option('u', "uri", HelpText = "Please specify the uri of Zipkin backend", Required = true)]
-    public required string Uri { get; set; }
+    public string Uri { get; set; }
 }
 
 [Verb("prometheus", HelpText = "Specify the options required to test Prometheus")]
-internal sealed class PrometheusOptions
+internal class PrometheusOptions
 {
     [Option('p', "port", Default = 9464, HelpText = "The port to expose metrics. The endpoint will be http://localhost:port/metrics/ (this is the port from which your Prometheus server scraps metrics from.)", Required = false)]
     public int Port { get; set; }
 }
 
 [Verb("metrics", HelpText = "Specify the options required to test Metrics")]
-internal sealed class MetricsOptions
+internal class MetricsOptions
 {
     [Option('d', "IsDelta", HelpText = "Export Delta metrics", Required = false, Default = false)]
     public bool IsDelta { get; set; }
@@ -83,71 +83,71 @@ internal sealed class MetricsOptions
     public int DefaultCollectionPeriodMilliseconds { get; set; }
 
     [Option("useExporter", Default = "console", HelpText = "Options include otlp or console.", Required = false)]
-    public string? UseExporter { get; set; }
+    public string UseExporter { get; set; }
 
     [Option('e', "endpoint", HelpText = "Target to which the exporter is going to send metrics (default value depends on protocol).", Default = null)]
-    public string? Endpoint { get; set; }
+    public string Endpoint { get; set; }
 
     [Option('p', "useGrpc", HelpText = "Use gRPC or HTTP when using the OTLP exporter", Required = false, Default = true)]
     public bool UseGrpc { get; set; }
 }
 
 [Verb("grpc", HelpText = "Specify the options required to test Grpc.Net.Client")]
-internal sealed class GrpcNetClientOptions
+internal class GrpcNetClientOptions
 {
 }
 
 [Verb("httpclient", HelpText = "Specify the options required to test HttpClient")]
-internal sealed class HttpClientOptions
+internal class HttpClientOptions
 {
 }
 
 [Verb("console", HelpText = "Specify the options required to test console exporter")]
-internal sealed class ConsoleOptions
+internal class ConsoleOptions
 {
 }
 
 [Verb("otelshim", HelpText = "Specify the options required to test OpenTelemetry Shim with console exporter")]
-internal sealed class OpenTelemetryShimOptions
+internal class OpenTelemetryShimOptions
 {
 }
 
 [Verb("opentracing", HelpText = "Specify the options required to test OpenTracing Shim with console exporter")]
-internal sealed class OpenTracingShimOptions
+internal class OpenTracingShimOptions
 {
 }
 
 [Verb("otlp", HelpText = "Specify the options required to test OpenTelemetry Protocol (OTLP)")]
-internal sealed class OtlpOptions
+internal class OtlpOptions
 {
     [Option('e', "endpoint", HelpText = "Target to which the exporter is going to send traces (default value depends on protocol).", Default = null)]
-    public string? Endpoint { get; set; }
+    public string Endpoint { get; set; }
 
     [Option('p', "protocol", HelpText = "Transport protocol used by exporter. Supported values: grpc and http/protobuf.", Default = "grpc")]
-    public string? Protocol { get; set; }
+    public string Protocol { get; set; }
 }
 
 [Verb("logs", HelpText = "Specify the options required to test Logs")]
-internal sealed class LogsOptions
+internal class LogsOptions
 {
     [Option("useExporter", Default = "otlp", HelpText = "Options include otlp or console.", Required = false)]
-    public string? UseExporter { get; set; }
+    public string UseExporter { get; set; }
 
     [Option('e', "endpoint", HelpText = "Target to which the OTLP exporter is going to send logs (default value depends on protocol).", Default = null)]
-    public string? Endpoint { get; set; }
+    public string Endpoint { get; set; }
 
     [Option('p', "protocol", HelpText = "Transport protocol used by OTLP exporter. Supported values: grpc and http/protobuf. Only applicable if Exporter is OTLP", Default = "grpc")]
-    public string? Protocol { get; set; }
+    public string Protocol { get; set; }
 
     [Option("processorType", Default = "batch", HelpText = "export processor type. Supported values: simple and batch", Required = false)]
-    public string? ProcessorType { get; set; }
+    public string ProcessorType { get; set; }
 
     [Option("scheduledDelay", Default = 5000, HelpText = "The delay interval in milliseconds between two consecutive exports.", Required = false)]
     public int ScheduledDelayInMilliseconds { get; set; }
 }
 
 [Verb("inmemory", HelpText = "Specify the options required to test InMemory Exporter")]
-internal sealed class InMemoryOptions
+internal class InMemoryOptions
 {
 }
 

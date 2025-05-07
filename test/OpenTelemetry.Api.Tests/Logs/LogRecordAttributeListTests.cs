@@ -29,15 +29,13 @@ public sealed class LogRecordAttributeListTests
             var item = attributes[i];
 
             Assert.Equal($"key{i}", item.Key);
-            Assert.NotNull(item.Value);
             Assert.Equal(i, (int)item.Value);
         }
 
         int index = 0;
-        foreach (KeyValuePair<string, object?> item in attributes)
+        foreach (KeyValuePair<string, object> item in attributes)
         {
             Assert.Equal($"key{index}", item.Key);
-            Assert.NotNull(item.Value);
             Assert.Equal(index, (int)item.Value);
             index++;
         }
@@ -76,7 +74,6 @@ public sealed class LogRecordAttributeListTests
                 var item = attributes[i];
 
                 Assert.Equal($"key{i}", item.Key);
-                Assert.NotNull(item.Value);
                 Assert.Equal(i, (int)item.Value);
             }
 
@@ -101,7 +98,7 @@ public sealed class LogRecordAttributeListTests
             attributes.Add($"key{i}", i);
         }
 
-        List<KeyValuePair<string, object?>>? storage = null;
+        List<KeyValuePair<string, object>> storage = null;
 
         var exportedAttributes = attributes.Export(ref storage);
 
@@ -125,36 +122,11 @@ public sealed class LogRecordAttributeListTests
         }
 
         int index = 0;
-        foreach (KeyValuePair<string, object?> item in exportedAttributes)
+        foreach (KeyValuePair<string, object> item in exportedAttributes)
         {
             Assert.Equal($"key{index}", item.Key);
-            Assert.NotNull(item.Value);
             Assert.Equal(index, (int)item.Value);
             index++;
         }
-    }
-
-    [Fact]
-    public void InitializerAddSyntaxTest()
-    {
-        LogRecordAttributeList list = new LogRecordAttributeList
-        {
-            { "key1", new object() },
-            { "key2", 2 },
-        };
-
-        Assert.Equal(2, list.Count);
-    }
-
-    [Fact]
-    public void InitializerIndexesSyntaxTest()
-    {
-        LogRecordAttributeList list = new LogRecordAttributeList
-        {
-            ["key1"] = new object(),
-            ["key2"] = 2,
-        };
-
-        Assert.Equal(2, list.Count);
     }
 }

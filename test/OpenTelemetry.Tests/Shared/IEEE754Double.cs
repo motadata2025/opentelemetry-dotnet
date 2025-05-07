@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 namespace OpenTelemetry.Tests;
 
 [StructLayout(LayoutKind.Explicit)]
-internal struct IEEE754Double
+public struct IEEE754Double
 {
     [FieldOffset(0)]
     public double DoubleValue = 0;
@@ -24,31 +24,16 @@ internal struct IEEE754Double
 
     public static implicit operator double(IEEE754Double value)
     {
-        return ToDouble(value);
-    }
-
-    public static IEEE754Double operator ++(IEEE754Double value)
-    {
-        return Increment(value);
-    }
-
-    public static IEEE754Double operator --(IEEE754Double value)
-    {
-        return Decrement(value);
-    }
-
-    public static double ToDouble(IEEE754Double value)
-    {
         return value.DoubleValue;
     }
 
-    public static IEEE754Double Increment(IEEE754Double value)
+    public static IEEE754Double operator ++(IEEE754Double value)
     {
         value.ULongValue++;
         return value;
     }
 
-    public static IEEE754Double Decrement(IEEE754Double value)
+    public static IEEE754Double operator --(IEEE754Double value)
     {
         value.ULongValue--;
         return value;
@@ -71,11 +56,7 @@ internal struct IEEE754Double
 
     public static IEEE754Double FromString(string value)
     {
-#if NET
-        return FromLong(Convert.ToInt64(value.Replace(" ", string.Empty, StringComparison.Ordinal), 2));
-#else
         return FromLong(Convert.ToInt64(value.Replace(" ", string.Empty), 2));
-#endif
     }
 
     public override string ToString()

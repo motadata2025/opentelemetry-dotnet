@@ -3,9 +3,8 @@
 
 #if !NETFRAMEWORK
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Net;
+using Google.Protobuf;
 using Grpc.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -17,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.ExportClient;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation.Transmission;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.PersistentStorage.Abstractions;
 using OpenTelemetry.Proto.Collector.Trace.V1;
 using OpenTelemetry.Tests;
@@ -59,7 +59,7 @@ public sealed class MockCollectorIntegrationTests
                            "/MockCollector/SetResponseCodes/{responseCodesCsv}",
                            (MockCollectorState collectorState, string responseCodesCsv) =>
                            {
-                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x)).ToArray();
                                collectorState.SetStatusCodes(codes);
                            });
 
@@ -71,15 +71,13 @@ public sealed class MockCollectorIntegrationTests
         using var httpClient = new HttpClient() { BaseAddress = new Uri($"http://localhost:{testHttpPort}") };
 
         var codes = new[] { Grpc.Core.StatusCode.Unimplemented, Grpc.Core.StatusCode.OK };
-        await httpClient.GetAsync(new Uri($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}", UriKind.Relative));
+        await httpClient.GetAsync($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}");
 
         var exportResults = new List<ExportResult>();
-        using var otlpExporter = new OtlpTraceExporter(new OtlpExporterOptions() { Endpoint = new Uri($"http://localhost:{testGrpcPort}") });
-#pragma warning disable CA2000 // Dispose objects before losing scope
+        var otlpExporter = new OtlpTraceExporter(new OtlpExporterOptions() { Endpoint = new Uri($"http://localhost:{testGrpcPort}") });
         var delegatingExporter = new DelegatingExporter<Activity>
-#pragma warning disable CA2000 // Dispose objects before losing scope
         {
-            OnExportFunc = batch =>
+            OnExportFunc = (batch) =>
             {
                 var result = otlpExporter.Export(batch);
                 exportResults.Add(result);
@@ -91,19 +89,17 @@ public sealed class MockCollectorIntegrationTests
 
         using var tracerProvider = Sdk.CreateTracerProviderBuilder()
             .AddSource(activitySourceName)
-#pragma warning disable CA2000 // Dispose objects before losing scope
             .AddProcessor(new SimpleActivityExportProcessor(delegatingExporter))
-#pragma warning restore CA2000 // Dispose objects before losing scope
             .Build();
 
         using var source = new ActivitySource(activitySourceName);
 
-        source.StartActivity()?.Stop();
+        source.StartActivity().Stop();
 
         Assert.Single(exportResults);
         Assert.Equal(ExportResult.Failure, exportResults[0]);
 
-        source.StartActivity()?.Stop();
+        source.StartActivity().Stop();
 
         Assert.Equal(2, exportResults.Count);
         Assert.Equal(ExportResult.Success, exportResults[1]);
@@ -163,7 +159,7 @@ public sealed class MockCollectorIntegrationTests
                            "/MockCollector/SetResponseCodes/{responseCodesCsv}",
                            (MockCollectorState collectorState, string responseCodesCsv) =>
                            {
-                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x)).ToArray();
                                collectorState.SetStatusCodes(codes);
                            });
 
@@ -176,20 +172,17 @@ public sealed class MockCollectorIntegrationTests
 
         // First reply with failure and then Ok
         var codes = new[] { initialStatusCode, Grpc.Core.StatusCode.OK };
-        await httpClient.GetAsync(new Uri($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}", UriKind.Relative));
+        await httpClient.GetAsync($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}");
 
         var endpoint = new Uri($"http://localhost:{testGrpcPort}");
 
         var exporterOptions = new OtlpExporterOptions() { Endpoint = endpoint, TimeoutMilliseconds = 20000, Protocol = OtlpExportProtocol.Grpc };
 
         var configuration = new ConfigurationBuilder()
-                                 .AddInMemoryCollection(new Dictionary<string, string?>
-                                 {
-                                     [ExperimentalOptions.OtlpRetryEnvVar] = useRetryTransmissionHandler ? "in_memory" : null,
-                                 })
-                                 .Build();
+         .AddInMemoryCollection(new Dictionary<string, string> { [ExperimentalOptions.OtlpRetryEnvVar] = useRetryTransmissionHandler ? "in_memory" : null })
+         .Build();
 
-        using var otlpExporter = new OtlpTraceExporter(exporterOptions, new SdkLimitOptions(), new ExperimentalOptions(configuration));
+        var otlpExporter = new OtlpTraceExporter(exporterOptions, new SdkLimitOptions(), new ExperimentalOptions(configuration));
 
         var activitySourceName = "otel.grpc.retry.test";
         using var source = new ActivitySource(activitySourceName);
@@ -199,7 +192,6 @@ public sealed class MockCollectorIntegrationTests
             .Build();
 
         using var activity = source.StartActivity("GrpcRetryTest");
-        Assert.NotNull(activity);
         activity.Stop();
         using var batch = new Batch<Activity>([activity], 1);
 
@@ -246,7 +238,7 @@ public sealed class MockCollectorIntegrationTests
                            "/MockCollector/SetResponseCodes/{responseCodesCsv}",
                            (MockCollectorHttpState collectorState, string responseCodesCsv) =>
                            {
-                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x)).ToArray();
                                collectorState.SetStatusCodes(codes);
                            });
 
@@ -264,20 +256,17 @@ public sealed class MockCollectorIntegrationTests
         using var httpClient = new HttpClient() { BaseAddress = new Uri($"http://localhost:{testHttpPort}") };
 
         var codes = new[] { initialHttpStatusCode, HttpStatusCode.OK };
-        await httpClient.GetAsync(new Uri($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}", UriKind.Relative));
+        await httpClient.GetAsync($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}");
 
         var endpoint = new Uri($"http://localhost:{testHttpPort}/v1/traces");
 
         var exporterOptions = new OtlpExporterOptions() { Endpoint = endpoint, TimeoutMilliseconds = 20000, Protocol = OtlpExportProtocol.HttpProtobuf };
 
         var configuration = new ConfigurationBuilder()
-                                 .AddInMemoryCollection(new Dictionary<string, string?>
-                                 {
-                                     [ExperimentalOptions.OtlpRetryEnvVar] = useRetryTransmissionHandler ? "in_memory" : null,
-                                 })
-                                 .Build();
+         .AddInMemoryCollection(new Dictionary<string, string> { [ExperimentalOptions.OtlpRetryEnvVar] = useRetryTransmissionHandler ? "in_memory" : null })
+         .Build();
 
-        using var otlpExporter = new OtlpTraceExporter(exporterOptions, new SdkLimitOptions(), new ExperimentalOptions(configuration));
+        var otlpExporter = new OtlpTraceExporter(exporterOptions, new SdkLimitOptions(), new ExperimentalOptions(configuration));
 
         var activitySourceName = "otel.http.retry.test";
         using var source = new ActivitySource(activitySourceName);
@@ -287,7 +276,6 @@ public sealed class MockCollectorIntegrationTests
             .Build();
 
         using var activity = source.StartActivity("HttpRetryTest");
-        Assert.NotNull(activity);
         activity.Stop();
         using var batch = new Batch<Activity>([activity], 1);
 
@@ -332,7 +320,7 @@ public sealed class MockCollectorIntegrationTests
                            "/MockCollector/SetResponseCodes/{responseCodesCsv}",
                            (MockCollectorHttpState collectorState, string responseCodesCsv) =>
                            {
-                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x)).ToArray();
                                collectorState.SetStatusCodes(codes);
                            });
 
@@ -350,32 +338,37 @@ public sealed class MockCollectorIntegrationTests
         using var httpClient = new HttpClient() { BaseAddress = new Uri($"http://localhost:{testHttpPort}") };
 
         var codes = new[] { initialHttpStatusCode, HttpStatusCode.OK };
-        await httpClient.GetAsync(new Uri($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}", UriKind.Relative));
+        await httpClient.GetAsync($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}");
 
         var endpoint = new Uri($"http://localhost:{testHttpPort}/v1/traces");
 
         var exporterOptions = new OtlpExporterOptions() { Endpoint = endpoint, TimeoutMilliseconds = 20000 };
 
-        using var exporterHttpClient = new HttpClient();
-        var exportClient = new OtlpHttpExportClient(exporterOptions, exporterHttpClient, "/v1/traces");
+        var exportClient = new OtlpHttpTraceExportClient(exporterOptions, new HttpClient());
 
         // TODO: update this to configure via experimental environment variable.
-        OtlpExporterTransmissionHandler transmissionHandler;
-        MockFileProvider? mockProvider = null;
+        OtlpExporterTransmissionHandler<ExportTraceServiceRequest> transmissionHandler;
+        MockFileProvider mockProvider = null;
         if (usePersistentStorageTransmissionHandler)
         {
             mockProvider = new MockFileProvider();
-            transmissionHandler = new OtlpExporterPersistentStorageTransmissionHandler(
+            transmissionHandler = new OtlpExporterPersistentStorageTransmissionHandler<ExportTraceServiceRequest>(
                 mockProvider,
                 exportClient,
-                exporterOptions.TimeoutMilliseconds);
+                exporterOptions.TimeoutMilliseconds,
+                (byte[] data) =>
+                {
+                    var request = new ExportTraceServiceRequest();
+                    request.MergeFrom(data);
+                    return request;
+                });
         }
         else
         {
-            transmissionHandler = new OtlpExporterTransmissionHandler(exportClient, exporterOptions.TimeoutMilliseconds);
+            transmissionHandler = new OtlpExporterTransmissionHandler<ExportTraceServiceRequest>(exportClient, exporterOptions.TimeoutMilliseconds);
         }
 
-        using var otlpExporter = new OtlpTraceExporter(exporterOptions, new(), new(), transmissionHandler);
+        var otlpExporter = new OtlpTraceExporter(exporterOptions, new(), new(), transmissionHandler);
 
         var activitySourceName = "otel.http.persistent.storage.retry.test";
         using var source = new ActivitySource(activitySourceName);
@@ -385,7 +378,6 @@ public sealed class MockCollectorIntegrationTests
             .Build();
 
         using var activity = source.StartActivity("HttpPersistentStorageRetryTest");
-        Assert.NotNull(activity);
         activity.Stop();
         using var batch = new Batch<Activity>([activity], 1);
 
@@ -395,13 +387,12 @@ public sealed class MockCollectorIntegrationTests
 
         if (usePersistentStorageTransmissionHandler)
         {
-            Assert.NotNull(mockProvider);
             if (exportResult == ExportResult.Success)
             {
                 Assert.Single(mockProvider.TryGetBlobs());
 
                 // Force Retry
-                Assert.True((transmissionHandler as OtlpExporterPersistentStorageTransmissionHandler)?.InitiateAndWaitForRetryProcess(-1));
+                Assert.True((transmissionHandler as OtlpExporterPersistentStorageTransmissionHandler<ExportTraceServiceRequest>).InitiateAndWaitForRetryProcess(-1));
 
                 Assert.False(mockProvider.TryGetBlob(out _));
             }
@@ -472,7 +463,7 @@ public sealed class MockCollectorIntegrationTests
                            "/MockCollector/SetResponseCodes/{responseCodesCsv}",
                            (MockCollectorState collectorState, string responseCodesCsv) =>
                            {
-                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+                               var codes = responseCodesCsv.Split(",").Select(x => int.Parse(x)).ToArray();
                                collectorState.SetStatusCodes(codes);
                            });
 
@@ -484,32 +475,37 @@ public sealed class MockCollectorIntegrationTests
         using var httpClient = new HttpClient() { BaseAddress = new Uri($"http://localhost:{testHttpPort}") };
 
         var codes = new[] { initialgrpcStatusCode, Grpc.Core.StatusCode.OK };
-        await httpClient.GetAsync(new Uri($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}", UriKind.Relative));
+        await httpClient.GetAsync($"/MockCollector/SetResponseCodes/{string.Join(",", codes.Select(x => (int)x))}");
 
         var endpoint = new Uri($"http://localhost:{testGrpcPort}");
 
         var exporterOptions = new OtlpExporterOptions() { Endpoint = endpoint, TimeoutMilliseconds = 20000 };
 
-        using var exporterHttpClient = new HttpClient();
-        var exportClient = new OtlpGrpcExportClient(exporterOptions, exporterHttpClient, "opentelemetry.proto.collector.trace.v1.TraceService/Export");
+        var exportClient = new OtlpGrpcTraceExportClient(exporterOptions);
 
         // TODO: update this to configure via experimental environment variable.
-        OtlpExporterTransmissionHandler transmissionHandler;
-        MockFileProvider? mockProvider = null;
+        OtlpExporterTransmissionHandler<ExportTraceServiceRequest> transmissionHandler;
+        MockFileProvider mockProvider = null;
         if (usePersistentStorageTransmissionHandler)
         {
             mockProvider = new MockFileProvider();
-            transmissionHandler = new OtlpExporterPersistentStorageTransmissionHandler(
+            transmissionHandler = new OtlpExporterPersistentStorageTransmissionHandler<ExportTraceServiceRequest>(
                 mockProvider,
                 exportClient,
-                exporterOptions.TimeoutMilliseconds);
+                exporterOptions.TimeoutMilliseconds,
+                (byte[] data) =>
+                {
+                    var request = new ExportTraceServiceRequest();
+                    request.MergeFrom(data);
+                    return request;
+                });
         }
         else
         {
-            transmissionHandler = new OtlpExporterTransmissionHandler(exportClient, exporterOptions.TimeoutMilliseconds);
+            transmissionHandler = new OtlpExporterTransmissionHandler<ExportTraceServiceRequest>(exportClient, exporterOptions.TimeoutMilliseconds);
         }
 
-        using var otlpExporter = new OtlpTraceExporter(exporterOptions, new(), new(), transmissionHandler);
+        var otlpExporter = new OtlpTraceExporter(exporterOptions, new(), new(), transmissionHandler);
 
         var activitySourceName = "otel.grpc.persistent.storage.retry.test";
         using var source = new ActivitySource(activitySourceName);
@@ -519,7 +515,6 @@ public sealed class MockCollectorIntegrationTests
             .Build();
 
         using var activity = source.StartActivity("GrpcPersistentStorageRetryTest");
-        Assert.NotNull(activity);
         activity.Stop();
         using var batch = new Batch<Activity>([activity], 1);
 
@@ -529,13 +524,12 @@ public sealed class MockCollectorIntegrationTests
 
         if (usePersistentStorageTransmissionHandler)
         {
-            Assert.NotNull(mockProvider);
             if (exportResult == ExportResult.Success)
             {
                 Assert.Single(mockProvider.TryGetBlobs());
 
                 // Force Retry
-                Assert.True((transmissionHandler as OtlpExporterPersistentStorageTransmissionHandler)?.InitiateAndWaitForRetryProcess(-1));
+                Assert.True((transmissionHandler as OtlpExporterPersistentStorageTransmissionHandler<ExportTraceServiceRequest>).InitiateAndWaitForRetryProcess(-1));
 
                 Assert.False(mockProvider.TryGetBlob(out _));
             }
@@ -554,10 +548,10 @@ public sealed class MockCollectorIntegrationTests
         transmissionHandler.Dispose();
     }
 
-    private sealed class MockCollectorState
+    private class MockCollectorState
     {
-        private Grpc.Core.StatusCode[] statusCodes = [];
-        private int statusCodeIndex;
+        private Grpc.Core.StatusCode[] statusCodes = { };
+        private int statusCodeIndex = 0;
 
         public void SetStatusCodes(int[] statusCodes)
         {
@@ -573,10 +567,10 @@ public sealed class MockCollectorIntegrationTests
         }
     }
 
-    private sealed class MockCollectorHttpState
+    private class MockCollectorHttpState
     {
-        private HttpStatusCode[] statusCodes = [];
-        private int statusCodeIndex;
+        private HttpStatusCode[] statusCodes = { };
+        private int statusCodeIndex = 0;
 
         public void SetStatusCodes(int[] statusCodes)
         {
@@ -592,9 +586,7 @@ public sealed class MockCollectorIntegrationTests
         }
     }
 
-#pragma warning disable CA1812 // Avoid uninstantiated internal classes
-    private sealed class MockTraceService : TraceService.TraceServiceBase
-#pragma warning restore CA1812 // Avoid uninstantiated internal classes
+    private class MockTraceService : TraceService.TraceServiceBase
     {
         private readonly MockCollectorState state;
 
@@ -615,9 +607,9 @@ public sealed class MockCollectorIntegrationTests
         }
     }
 
-    private sealed class MockFileProvider : PersistentBlobProvider
+    private class MockFileProvider : PersistentBlobProvider
     {
-        private readonly List<PersistentBlob> mockStorage = [];
+        private readonly List<PersistentBlob> mockStorage = new();
 
         public IEnumerable<PersistentBlob> TryGetBlobs() => this.mockStorage.AsEnumerable();
 
@@ -638,7 +630,7 @@ public sealed class MockCollectorIntegrationTests
             return blob.TryWrite(buffer);
         }
 
-        protected override bool OnTryGetBlob([NotNullWhen(true)] out PersistentBlob? blob)
+        protected override bool OnTryGetBlob(out PersistentBlob blob)
         {
             blob = this.GetBlobs().FirstOrDefault();
 
@@ -646,11 +638,11 @@ public sealed class MockCollectorIntegrationTests
         }
     }
 
-    private sealed class MockFileBlob : PersistentBlob
+    private class MockFileBlob : PersistentBlob
     {
         private readonly List<PersistentBlob> mockStorage;
 
-        private byte[] buffer = [];
+        private byte[] buffer = Array.Empty<byte>();
 
         public MockFileBlob(List<PersistentBlob> mockStorage)
         {

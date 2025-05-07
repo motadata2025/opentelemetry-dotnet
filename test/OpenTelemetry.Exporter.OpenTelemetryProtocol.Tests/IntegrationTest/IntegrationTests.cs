@@ -4,7 +4,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Diagnostics.Tracing;
-using System.Globalization;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter.OpenTelemetryProtocol.Implementation;
 using OpenTelemetry.Logs;
@@ -22,7 +21,7 @@ public sealed class IntegrationTests : IDisposable
     private const int ExportIntervalMilliseconds = 10000;
     private static readonly SdkLimitOptions DefaultSdkLimitOptions = new();
     private static readonly ExperimentalOptions DefaultExperimentalOptions = new();
-    private static readonly string? CollectorHostname = SkipUnlessEnvVarFoundTheoryAttribute.GetEnvironmentVariable(CollectorHostnameEnvVarName);
+    private static readonly string CollectorHostname = SkipUnlessEnvVarFoundTheoryAttribute.GetEnvironmentVariable(CollectorHostnameEnvVarName);
     private readonly OpenTelemetryEventListener openTelemetryEventListener;
 
     public IntegrationTests(ITestOutputHelper outputHelper)
@@ -35,7 +34,6 @@ public sealed class IntegrationTests : IDisposable
         this.openTelemetryEventListener.Dispose();
     }
 
-#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
     [InlineData(OtlpExportProtocol.Grpc, ":4317", ExportProcessorType.Batch, false)]
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":4318/v1/traces", ExportProcessorType.Batch, false)]
     [InlineData(OtlpExportProtocol.Grpc, ":4317", ExportProcessorType.Batch, true)]
@@ -46,7 +44,6 @@ public sealed class IntegrationTests : IDisposable
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":4318/v1/traces", ExportProcessorType.Simple, true)]
     [InlineData(OtlpExportProtocol.Grpc, ":5317", ExportProcessorType.Simple, true, "https")]
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":5318/v1/traces", ExportProcessorType.Simple, true, "https")]
-#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
     [Trait("CategoryName", "CollectorIntegrationTests")]
     [SkipUnlessEnvVarFoundTheory(CollectorHostnameEnvVarName)]
     public void TraceExportResultIsSuccess(OtlpExportProtocol protocol, string endpoint, ExportProcessorType exportProcessorType, bool forceFlush, string scheme = "http")
@@ -64,7 +61,7 @@ public sealed class IntegrationTests : IDisposable
             },
         };
 
-        DelegatingExporter<Activity>? delegatingExporter = null;
+        DelegatingExporter<Activity> delegatingExporter = null;
         var exportResults = new List<ExportResult>();
 
         var activitySourceName = "otlp.collector.test";
@@ -121,7 +118,6 @@ public sealed class IntegrationTests : IDisposable
         }
     }
 
-#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
     [InlineData(OtlpExportProtocol.Grpc, ":4317", false, false)]
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":4318/v1/metrics", false, false)]
     [InlineData(OtlpExportProtocol.Grpc, ":4317", false, true)]
@@ -132,7 +128,6 @@ public sealed class IntegrationTests : IDisposable
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":4318/v1/metrics", true, true)]
     [InlineData(OtlpExportProtocol.Grpc, ":5317", true, true, "https")]
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":5318/v1/metrics", true, true, "https")]
-#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
     [Trait("CategoryName", "CollectorIntegrationTests")]
     [SkipUnlessEnvVarFoundTheory(CollectorHostnameEnvVarName)]
     public void MetricExportResultIsSuccess(OtlpExportProtocol protocol, string endpoint, bool useManualExport, bool forceFlush, string scheme = "http")
@@ -145,7 +140,7 @@ public sealed class IntegrationTests : IDisposable
             Protocol = protocol,
         };
 
-        DelegatingExporter<Metric>? delegatingExporter = null;
+        DelegatingExporter<Metric> delegatingExporter = null;
         var exportResults = new List<ExportResult>();
 
         var meterName = "otlp.collector.test";
@@ -207,14 +202,12 @@ public sealed class IntegrationTests : IDisposable
         }
     }
 
-#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
     [InlineData(OtlpExportProtocol.Grpc, ":4317", ExportProcessorType.Batch)]
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":4318/v1/logs", ExportProcessorType.Batch)]
     [InlineData(OtlpExportProtocol.Grpc, ":4317", ExportProcessorType.Simple)]
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":4318/v1/logs", ExportProcessorType.Simple)]
     [InlineData(OtlpExportProtocol.Grpc, ":5317", ExportProcessorType.Simple, "https")]
     [InlineData(OtlpExportProtocol.HttpProtobuf, ":5318/v1/logs", ExportProcessorType.Simple, "https")]
-#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
     [Trait("CategoryName", "CollectorIntegrationTests")]
     [SkipUnlessEnvVarFoundTheory(CollectorHostnameEnvVarName)]
     public void LogExportResultIsSuccess(OtlpExportProtocol protocol, string endpoint, ExportProcessorType exportProcessorType, string scheme = "http")
@@ -227,7 +220,7 @@ public sealed class IntegrationTests : IDisposable
             Protocol = protocol,
         };
 
-        DelegatingExporter<LogRecord> delegatingExporter;
+        DelegatingExporter<LogRecord> delegatingExporter = null;
         var exportResults = new List<ExportResult>();
         var processorOptions = new LogRecordExportProcessorOptions
         {
@@ -266,7 +259,7 @@ public sealed class IntegrationTests : IDisposable
         });
 
         var logger = loggerFactory.CreateLogger("OtlpLogExporterTests");
-        logger.HelloFrom("tomato", 2.99);
+        logger.LogInformation("Hello from {name} {price}.", "tomato", 2.99);
 
         switch (processorOptions.ExportProcessorType)
         {
@@ -305,10 +298,10 @@ public sealed class IntegrationTests : IDisposable
 
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
         {
-            string? message;
-            if (eventData.Message != null && eventData.Payload != null && eventData.Payload.Count > 0)
+            string message;
+            if (eventData.Message != null && (eventData.Payload?.Count ?? 0) > 0)
             {
-                message = string.Format(CultureInfo.InvariantCulture, eventData.Message, eventData.Payload.ToArray());
+                message = string.Format(eventData.Message, eventData.Payload.ToArray());
             }
             else
             {

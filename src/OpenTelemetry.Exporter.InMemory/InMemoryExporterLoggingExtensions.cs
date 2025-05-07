@@ -6,9 +6,7 @@ using OpenTelemetry.Internal;
 
 namespace OpenTelemetry.Logs;
 
-#pragma warning disable CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 public static class InMemoryExporterLoggingExtensions
-#pragma warning restore CA1001 // Types that own disposable fields should be disposable - handled by GlobalCleanup
 {
     /// <summary>
     /// Adds InMemory exporter to the OpenTelemetryLoggerOptions.
@@ -24,12 +22,10 @@ public static class InMemoryExporterLoggingExtensions
         Guard.ThrowIfNull(loggerOptions);
         Guard.ThrowIfNull(exportedItems);
 
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var logExporter = BuildExporter(exportedItems);
 
         return loggerOptions.AddProcessor(
             new SimpleLogRecordExportProcessor(logExporter));
-#pragma warning restore CA2000 // Dispose objects before losing scope
     }
 
     /// <summary>
@@ -45,12 +41,10 @@ public static class InMemoryExporterLoggingExtensions
         Guard.ThrowIfNull(loggerProviderBuilder);
         Guard.ThrowIfNull(exportedItems);
 
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var logExporter = BuildExporter(exportedItems);
 
         return loggerProviderBuilder.AddProcessor(
             new SimpleLogRecordExportProcessor(logExporter));
-#pragma warning restore CA2000 // Dispose objects before losing scope
     }
 
     private static InMemoryExporter<LogRecord> BuildExporter(ICollection<LogRecord> exportedItems)

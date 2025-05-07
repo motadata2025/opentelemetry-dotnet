@@ -5,13 +5,23 @@ using Utils.Messaging;
 
 namespace WorkerService;
 
-internal sealed class Worker : BackgroundService
+public partial class Worker : BackgroundService
 {
     private readonly MessageReceiver messageReceiver;
 
     public Worker(MessageReceiver messageReceiver)
     {
         this.messageReceiver = messageReceiver;
+    }
+
+    public override Task StartAsync(CancellationToken cancellationToken)
+    {
+        return base.StartAsync(cancellationToken);
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

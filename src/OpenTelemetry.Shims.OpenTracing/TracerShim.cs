@@ -14,7 +14,7 @@ namespace OpenTelemetry.Shims.OpenTracing;
 public class TracerShim : global::OpenTracing.ITracer
 {
     private readonly Trace.Tracer tracer;
-    private readonly TextMapPropagator? definedPropagator;
+    private readonly TextMapPropagator definedPropagator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TracerShim"/> class.
@@ -30,7 +30,7 @@ public class TracerShim : global::OpenTracing.ITracer
     /// </summary>
     /// <param name="tracerProvider"><see cref="Trace.TracerProvider"/>.</param>
     /// <param name="textFormat"><see cref="TextMapPropagator"/>.</param>
-    public TracerShim(Trace.TracerProvider tracerProvider, TextMapPropagator? textFormat)
+    public TracerShim(Trace.TracerProvider tracerProvider, TextMapPropagator textFormat)
     {
         Guard.ThrowIfNull(tracerProvider);
 
@@ -46,9 +46,15 @@ public class TracerShim : global::OpenTracing.ITracer
     public global::OpenTracing.IScopeManager ScopeManager { get; }
 
     /// <inheritdoc/>
-    public global::OpenTracing.ISpan? ActiveSpan => this.ScopeManager.Active?.Span;
+    public global::OpenTracing.ISpan ActiveSpan => this.ScopeManager.Active?.Span;
 
-    private TextMapPropagator Propagator => this.definedPropagator ?? Propagators.DefaultTextMapPropagator;
+    private TextMapPropagator Propagator
+    {
+        get
+        {
+            return this.definedPropagator ?? Propagators.DefaultTextMapPropagator;
+        }
+    }
 
     /// <inheritdoc/>
     public global::OpenTracing.ISpanBuilder BuildSpan(string operationName)
@@ -57,7 +63,7 @@ public class TracerShim : global::OpenTracing.ITracer
     }
 
     /// <inheritdoc/>
-    public global::OpenTracing.ISpanContext? Extract<TCarrier>(IFormat<TCarrier> format, TCarrier carrier)
+    public global::OpenTracing.ISpanContext Extract<TCarrier>(IFormat<TCarrier> format, TCarrier carrier)
     {
         Guard.ThrowIfNull(format);
         Guard.ThrowIfNull(carrier);
@@ -70,10 +76,10 @@ public class TracerShim : global::OpenTracing.ITracer
 
             foreach (var entry in textMapCarrier)
             {
-                carrierMap.Add(entry.Key, [entry.Value]);
+                carrierMap.Add(entry.Key, new[] { entry.Value });
             }
 
-            static IEnumerable<string>? GetCarrierKeyValue(Dictionary<string, IEnumerable<string>> source, string key)
+            static IEnumerable<string> GetCarrierKeyValue(Dictionary<string, IEnumerable<string>> source, string key)
             {
                 if (key == null || !source.TryGetValue(key, out var value))
                 {

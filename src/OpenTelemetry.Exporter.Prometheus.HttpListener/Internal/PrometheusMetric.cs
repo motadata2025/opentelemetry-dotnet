@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using OpenTelemetry.Metrics;
 
@@ -16,10 +14,10 @@ internal sealed class PrometheusMetric
        UpDownCounter becomes gauge
      * https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/data-model.md#otlp-metric-points-to-prometheus
     */
-    private static readonly PrometheusType[] MetricTypes =
-    [
+    private static readonly PrometheusType[] MetricTypes = new PrometheusType[]
+    {
         PrometheusType.Untyped, PrometheusType.Counter, PrometheusType.Gauge, PrometheusType.Summary, PrometheusType.Histogram, PrometheusType.Histogram, PrometheusType.Histogram, PrometheusType.Histogram, PrometheusType.Gauge,
-    ];
+    };
 
     public PrometheusMetric(string name, string unit, PrometheusType type, bool disableTotalNameSuffixForCounters)
     {
@@ -31,16 +29,16 @@ internal sealed class PrometheusMetric
         var sanitizedName = SanitizeMetricName(name);
         var openMetricsName = SanitizeOpenMetricsName(sanitizedName);
 
-        string? sanitizedUnit = null;
+        string sanitizedUnit = null;
         if (!string.IsNullOrEmpty(unit))
         {
             sanitizedUnit = GetUnit(unit);
 
             // The resulting unit SHOULD be added to the metric as
-            // [OpenMetrics UNIT metadata](https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#metricfamily)
+            // [OpenMetrics UNIT metadata](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#metricfamily)
             // and as a suffix to the metric name. The unit suffix comes before any type-specific suffixes.
             // https://github.com/open-telemetry/opentelemetry-specification/blob/3dfb383fe583e3b74a2365c5a1d90256b273ee76/specification/compatibility/prometheus_and_openmetrics.md#metric-metadata-1
-            if (!sanitizedName.EndsWith(sanitizedUnit, StringComparison.Ordinal))
+            if (!sanitizedName.EndsWith(sanitizedUnit))
             {
                 sanitizedName += $"_{sanitizedUnit}";
                 openMetricsName += $"_{sanitizedUnit}";
@@ -51,20 +49,20 @@ internal sealed class PrometheusMetric
         // Exporters SHOULD provide a configuration option to disable the addition of `_total` suffixes.
         // https://github.com/open-telemetry/opentelemetry-specification/blob/b2f923fb1650dde1f061507908b834035506a796/specification/compatibility/prometheus_and_openmetrics.md#L286
         // Note that we no longer append '_ratio' for units that are '1', see: https://github.com/open-telemetry/opentelemetry-specification/issues/4058
-        if (type == PrometheusType.Counter && !sanitizedName.EndsWith("_total", StringComparison.Ordinal) && !disableTotalNameSuffixForCounters)
+        if (type == PrometheusType.Counter && !sanitizedName.EndsWith("_total") && !disableTotalNameSuffixForCounters)
         {
             sanitizedName += "_total";
         }
 
         // For counters requested using OpenMetrics format, the MetricFamily name MUST be suffixed with '_total', regardless of the setting to disable the 'total' suffix.
-        // https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#counter-1
-        if (type == PrometheusType.Counter && !openMetricsName.EndsWith("_total", StringComparison.Ordinal))
+        // https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#counter-1
+        if (type == PrometheusType.Counter && !openMetricsName.EndsWith("_total"))
         {
             openMetricsName += "_total";
         }
 
         // In OpenMetrics format, the UNIT, TYPE and HELP metadata must be suffixed with the unit (handled above), and not the '_total' suffix, as in the case for counters.
-        // https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#unit
+        // https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#unit
         var openMetricsMetadataName = type == PrometheusType.Counter
             ? SanitizeOpenMetricsName(openMetricsName)
             : sanitizedName;
@@ -82,7 +80,7 @@ internal sealed class PrometheusMetric
 
     public string OpenMetricsMetadataName { get; }
 
-    public string? Unit { get; }
+    public string Unit { get; }
 
     public PrometheusType Type { get; }
 
@@ -93,7 +91,7 @@ internal sealed class PrometheusMetric
 
     internal static string SanitizeMetricName(string metricName)
     {
-        StringBuilder? sb = null;
+        StringBuilder sb = null;
         var lastCharUnderscore = false;
 
         for (var i = 0; i < metricName.Length; i++)
@@ -127,7 +125,7 @@ internal sealed class PrometheusMetric
 
         return sb?.ToString() ?? metricName;
 
-        static StringBuilder CreateStringBuilder(string name) => new(name.Length);
+        static StringBuilder CreateStringBuilder(string name) => new StringBuilder(name.Length);
     }
 
     internal static string RemoveAnnotations(string unit)
@@ -136,7 +134,7 @@ internal sealed class PrometheusMetric
         // https://ucum.org/ucum#section-Character-Set-and-Lexical-Rules
         // What should happen if they are nested isn't defined.
         // Right now the remove annotations code doesn't attempt to balance multiple start and end braces.
-        StringBuilder? sb = null;
+        StringBuilder sb = null;
 
         var hasOpenBrace = false;
         var startOpenBraceIndex = 0;
@@ -170,16 +168,13 @@ internal sealed class PrometheusMetric
             return unit;
         }
 
-        Debug.Assert(sb != null, "sb was null");
-
-        sb!.Append(unit, lastWriteIndex, unit.Length - lastWriteIndex);
-
+        sb.Append(unit, lastWriteIndex, unit.Length - lastWriteIndex);
         return sb.ToString();
     }
 
     private static string SanitizeOpenMetricsName(string metricName)
     {
-        if (metricName.EndsWith("_total", StringComparison.Ordinal))
+        if (metricName.EndsWith("_total"))
         {
             return metricName.Substring(0, metricName.Length - 6);
         }
@@ -209,7 +204,7 @@ internal sealed class PrometheusMetric
         return updatedUnit;
     }
 
-    private static bool TryProcessRateUnits(string updatedUnit, [NotNullWhen(true)] out string? updatedPerUnit)
+    private static bool TryProcessRateUnits(string updatedUnit, out string updatedPerUnit)
     {
         updatedPerUnit = null;
 
@@ -241,7 +236,7 @@ internal sealed class PrometheusMetric
     // OTLP metrics use the c/s notation as specified at https://ucum.org/ucum.html
     // (See also https://github.com/open-telemetry/semantic-conventions/blob/main/docs/general/metrics.md#instrument-units)
     // Prometheus best practices for units: https://prometheus.io/docs/practices/naming/#base-units
-    // OpenMetrics specification for units: https://github.com/prometheus/OpenMetrics/blob/v1.0.0/specification/OpenMetrics.md#units-and-base-units
+    // OpenMetrics specification for units: https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md#units-and-base-units
     private static string MapUnit(ReadOnlySpan<char> unit)
     {
         return unit switch

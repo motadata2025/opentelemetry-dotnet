@@ -11,10 +11,10 @@ internal sealed class PrometheusHttpListener : IDisposable
 {
     private readonly PrometheusExporter exporter;
     private readonly HttpListener httpListener = new();
-    private readonly Lock syncObject = new();
+    private readonly object syncObject = new();
 
-    private CancellationTokenSource? tokenSource;
-    private Task? workerThread;
+    private CancellationTokenSource tokenSource;
+    private Task workerThread;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PrometheusHttpListener"/> class.
@@ -28,22 +28,14 @@ internal sealed class PrometheusHttpListener : IDisposable
 
         this.exporter = exporter;
 
-        string path = options.ScrapeEndpointPath ?? PrometheusHttpListenerOptions.DefaultScrapeEndpointPath;
+        string path = options.ScrapeEndpointPath;
 
-#if NET
-        if (!path.StartsWith('/'))
-#else
-        if (!path.StartsWith("/", StringComparison.Ordinal))
-#endif
+        if (!path.StartsWith("/"))
         {
             path = $"/{path}";
         }
 
-#if NET
-        if (!path.EndsWith('/'))
-#else
-        if (!path.EndsWith("/", StringComparison.Ordinal))
-#endif
+        if (!path.EndsWith("/"))
         {
             path = $"{path}/";
         }
@@ -91,7 +83,7 @@ internal sealed class PrometheusHttpListener : IDisposable
             }
 
             this.tokenSource.Cancel();
-            this.workerThread!.Wait();
+            this.workerThread.Wait();
             this.tokenSource = null;
         }
     }
@@ -124,7 +116,7 @@ internal sealed class PrometheusHttpListener : IDisposable
         try
         {
             using var scope = SuppressInstrumentationScope.Begin();
-            while (!this.tokenSource!.IsCancellationRequested)
+            while (!this.tokenSource.IsCancellationRequested)
             {
                 var ctxTask = this.httpListener.GetContextAsync();
                 ctxTask.Wait(this.tokenSource.Token);
@@ -172,11 +164,7 @@ internal sealed class PrometheusHttpListener : IDisposable
                         ? "application/openmetrics-text; version=1.0.0; charset=utf-8"
                         : "text/plain; charset=utf-8; version=0.0.4";
 
-#if NET
-                    await context.Response.OutputStream.WriteAsync(dataView.Array.AsMemory(0, dataView.Count)).ConfigureAwait(false);
-#else
                     await context.Response.OutputStream.WriteAsync(dataView.Array, 0, dataView.Count).ConfigureAwait(false);
-#endif
                 }
                 else
                 {

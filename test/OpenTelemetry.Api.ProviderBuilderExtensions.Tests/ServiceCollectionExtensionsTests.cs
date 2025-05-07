@@ -30,7 +30,7 @@ public class ServiceCollectionExtensionsTests
 
         using var serviceProvider = services.BuildServiceProvider();
 
-        var registrations = serviceProvider.GetServices<IConfigureTracerProviderBuilder>().ToArray();
+        var registrations = serviceProvider.GetServices<IConfigureTracerProviderBuilder>();
 
         Assert.Equal(numberOfCalls, beforeServiceProviderInvocations);
         Assert.Equal(0, afterServiceProviderInvocations);
@@ -43,7 +43,7 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(numberOfCalls, beforeServiceProviderInvocations);
         Assert.Equal(numberOfCalls, afterServiceProviderInvocations);
 
-        Assert.Equal(numberOfCalls * 2, registrations.Length);
+        Assert.Equal(numberOfCalls * 2, registrations.Count());
     }
 
     [Theory]
@@ -65,7 +65,7 @@ public class ServiceCollectionExtensionsTests
 
         using var serviceProvider = services.BuildServiceProvider();
 
-        var registrations = serviceProvider.GetServices<IConfigureMeterProviderBuilder>().ToArray();
+        var registrations = serviceProvider.GetServices<IConfigureMeterProviderBuilder>();
 
         Assert.Equal(numberOfCalls, beforeServiceProviderInvocations);
         Assert.Equal(0, afterServiceProviderInvocations);
@@ -78,7 +78,7 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(numberOfCalls, beforeServiceProviderInvocations);
         Assert.Equal(numberOfCalls, afterServiceProviderInvocations);
 
-        Assert.Equal(numberOfCalls * 2, registrations.Length);
+        Assert.Equal(numberOfCalls * 2, registrations.Count());
     }
 
     [Theory]
@@ -100,7 +100,7 @@ public class ServiceCollectionExtensionsTests
 
         using var serviceProvider = services.BuildServiceProvider();
 
-        var registrations = serviceProvider.GetServices<IConfigureLoggerProviderBuilder>().ToArray();
+        var registrations = serviceProvider.GetServices<IConfigureLoggerProviderBuilder>();
 
         Assert.Equal(numberOfCalls, beforeServiceProviderInvocations);
         Assert.Equal(0, afterServiceProviderInvocations);
@@ -113,6 +113,6 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(numberOfCalls, beforeServiceProviderInvocations);
         Assert.Equal(numberOfCalls, afterServiceProviderInvocations);
 
-        Assert.Equal(numberOfCalls * 2, registrations.Length);
+        Assert.Equal(numberOfCalls * 2, registrations.Count());
     }
 }

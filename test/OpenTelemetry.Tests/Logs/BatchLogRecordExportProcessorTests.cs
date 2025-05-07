@@ -18,9 +18,7 @@ public sealed class BatchLogRecordExportProcessorTests
         List<LogRecord> exportedItems = new();
 
         using var processor = new BatchLogRecordExportProcessor(
-#pragma warning disable CA2000 // Dispose objects before losing scope
             new InMemoryExporter<LogRecord>(exportedItems),
-#pragma warning restore CA2000 // Dispose objects before losing scope
             scheduledDelayMilliseconds: int.MaxValue);
 
         using var scope = scopeProvider.Push(exportedItems);
@@ -29,7 +27,7 @@ public sealed class BatchLogRecordExportProcessorTests
 
         var logRecord = pool.Rent();
 
-        var state = new LogRecordTests.DisposingState("Hello world");
+        var state = new LogRecordTest.DisposingState("Hello world");
 
         logRecord.ILoggerData.ScopeProvider = scopeProvider;
         logRecord.StateValues = state;
@@ -45,23 +43,20 @@ public sealed class BatchLogRecordExportProcessorTests
         Assert.NotNull(logRecord.AttributeStorage);
         Assert.NotNull(logRecord.ILoggerData.BufferedScopes);
 
-        KeyValuePair<string, object?> actualState = logRecord.StateValues[0];
+        KeyValuePair<string, object> actualState = logRecord.StateValues[0];
 
         Assert.Same("Value", actualState.Key);
         Assert.Same("Hello world", actualState.Value);
 
-        int scopeCount = 0;
         bool foundScope = false;
 
-        logRecord.ForEachScope<object?>(
+        logRecord.ForEachScope<object>(
             (s, o) =>
             {
                 foundScope = ReferenceEquals(s.Scope, exportedItems);
-                scopeCount++;
             },
             null);
 
-        Assert.Equal(1, scopeCount);
         Assert.True(foundScope);
 
         processor.Shutdown();
@@ -80,15 +75,13 @@ public sealed class BatchLogRecordExportProcessorTests
         List<LogRecord> exportedItems = new();
 
         using var processor = new BatchLogRecordExportProcessor(
-#pragma warning disable CA2000 // Dispose objects before losing scope
             new InMemoryExporter<LogRecord>(exportedItems));
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
         var pool = LogRecordSharedPool.Current;
 
         var logRecord = pool.Rent();
 
-        var state = new LogRecordTests.DisposingState("Hello world");
+        var state = new LogRecordTest.DisposingState("Hello world");
         logRecord.State = state;
 
         processor.OnEnd(logRecord);
@@ -115,9 +108,7 @@ public sealed class BatchLogRecordExportProcessorTests
         List<LogRecord> exportedItems = new();
 
         using var processor = new BatchLogRecordExportProcessor(
-#pragma warning disable CA2000 // Dispose objects before losing scope
             new InMemoryExporter<LogRecord>(exportedItems));
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
         var pool = LogRecordThreadStaticPool.Instance;
 
@@ -136,9 +127,7 @@ public sealed class BatchLogRecordExportProcessorTests
         List<LogRecord> exportedItems = new();
 
         using var processor = new BatchLogRecordExportProcessor(
-#pragma warning disable CA2000 // Dispose objects before losing scope
             new InMemoryExporter<LogRecord>(exportedItems));
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
         var logRecord = new LogRecord();
 

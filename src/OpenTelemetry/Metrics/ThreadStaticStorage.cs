@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#if NET
+#if NET8_0_OR_GREATER
 using System.Collections.Frozen;
 #endif
 using System.Diagnostics;
@@ -57,7 +57,7 @@ internal sealed class ThreadStaticStorage
     internal void SplitToKeysAndValues(
         ReadOnlySpan<KeyValuePair<string, object?>> tags,
         int tagLength,
-#if NET
+#if NET8_0_OR_GREATER
         FrozenSet<string> tagKeysInteresting,
 #else
         HashSet<string> tagKeysInteresting,

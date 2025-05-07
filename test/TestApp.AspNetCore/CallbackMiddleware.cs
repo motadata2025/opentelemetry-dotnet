@@ -3,22 +3,30 @@
 
 namespace TestApp.AspNetCore;
 
-internal sealed class CallbackMiddleware
+public class CallbackMiddleware
 {
-    private readonly CallbackMiddlewareCore core;
+    private readonly CallbackMiddlewareImpl impl;
     private readonly RequestDelegate next;
 
-    public CallbackMiddleware(RequestDelegate next, CallbackMiddlewareCore core)
+    public CallbackMiddleware(RequestDelegate next, CallbackMiddlewareImpl impl)
     {
         this.next = next;
-        this.core = core;
+        this.impl = impl;
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (this.core == null || await this.core.ProcessAsync(context).ConfigureAwait(true))
+        if (this.impl == null || await this.impl.ProcessAsync(context))
         {
-            await this.next(context).ConfigureAwait(true);
+            await this.next(context);
+        }
+    }
+
+    public class CallbackMiddlewareImpl
+    {
+        public virtual async Task<bool> ProcessAsync(HttpContext context)
+        {
+            return await Task.FromResult(true);
         }
     }
 }

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace OpenTelemetry.Tests;
 
-internal sealed class TestActivityExportProcessor : SimpleActivityExportProcessor
+internal class TestActivityExportProcessor : SimpleActivityExportProcessor
 {
     public List<Activity> ExportedItems = new();
 

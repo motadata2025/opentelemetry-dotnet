@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
@@ -12,7 +14,7 @@ internal static class PersistentStorageHelper
     {
         if (filePath.EndsWith(".blob", StringComparison.OrdinalIgnoreCase))
         {
-            var fileDateTime = GetDateTimeFromBlobName(filePath);
+            DateTime fileDateTime = GetDateTimeFromBlobName(filePath);
             if (fileDateTime < retentionDeadline)
             {
                 try
@@ -30,11 +32,11 @@ internal static class PersistentStorageHelper
 
     internal static bool RemoveExpiredLease(DateTime leaseDeadline, string filePath)
     {
-        var success = false;
+        bool success = false;
 
         if (filePath.EndsWith(".lock", StringComparison.OrdinalIgnoreCase))
         {
-            var fileDateTime = GetDateTimeFromLeaseName(filePath);
+            DateTime fileDateTime = GetDateTimeFromLeaseName(filePath);
             if (fileDateTime < leaseDeadline)
             {
                 var newFilePath = filePath.Substring(0, filePath.LastIndexOf('@'));
@@ -55,11 +57,11 @@ internal static class PersistentStorageHelper
 
     internal static bool RemoveTimedOutTmpFiles(DateTime timeoutDeadline, string filePath)
     {
-        var success = false;
+        bool success = false;
 
         if (filePath.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
         {
-            var fileDateTime = GetDateTimeFromBlobName(filePath);
+            DateTime fileDateTime = GetDateTimeFromBlobName(filePath);
             if (fileDateTime < timeoutDeadline)
             {
                 try
@@ -144,7 +146,7 @@ internal static class PersistentStorageHelper
     {
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         var startIndex = fileName.LastIndexOf('@') + 1;
-        var time = fileName.Substring(startIndex);
+        var time = fileName.Substring(startIndex, fileName.Length - startIndex);
         DateTime.TryParseExact(time, "yyyy-MM-ddTHHmmss.fffffffZ", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime);
         return dateTime.ToUniversalTime();
     }

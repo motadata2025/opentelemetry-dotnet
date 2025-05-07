@@ -1,7 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Globalization;
+#nullable enable
+
 using Microsoft.Extensions.Configuration;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
@@ -24,9 +25,7 @@ public sealed class PeriodicExportingMetricReaderHelperTests : IDisposable
     [Fact]
     public void CreatePeriodicExportingMetricReader_Defaults()
     {
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var reader = CreatePeriodicExportingMetricReader();
-#pragma warning restore CA2000 // Dispose objects before losing scope
 
         Assert.Equal(60000, reader.ExportIntervalMilliseconds);
         Assert.Equal(30000, reader.ExportTimeoutMilliseconds);
@@ -37,7 +36,7 @@ public sealed class PeriodicExportingMetricReaderHelperTests : IDisposable
     public void CreatePeriodicExportingMetricReader_TemporalityPreference_FromOptions()
     {
         var value = MetricReaderTemporalityPreference.Delta;
-        using var reader = CreatePeriodicExportingMetricReader(new()
+        var reader = CreatePeriodicExportingMetricReader(new()
         {
             TemporalityPreference = value,
         });
@@ -50,7 +49,7 @@ public sealed class PeriodicExportingMetricReaderHelperTests : IDisposable
     {
         Environment.SetEnvironmentVariable(PeriodicExportingMetricReaderOptions.OTelMetricExportIntervalEnvVarKey, "88888"); // should be ignored, as value set via options has higher priority
         var value = 123;
-        using var reader = CreatePeriodicExportingMetricReader(new()
+        var reader = CreatePeriodicExportingMetricReader(new()
         {
             PeriodicExportingMetricReaderOptions = new()
             {
@@ -66,7 +65,7 @@ public sealed class PeriodicExportingMetricReaderHelperTests : IDisposable
     {
         Environment.SetEnvironmentVariable(PeriodicExportingMetricReaderOptions.OTelMetricExportTimeoutEnvVarKey, "99999"); // should be ignored, as value set via options has higher priority
         var value = 456;
-        using var reader = CreatePeriodicExportingMetricReader(new()
+        var reader = CreatePeriodicExportingMetricReader(new()
         {
             PeriodicExportingMetricReaderOptions = new()
             {
@@ -81,8 +80,8 @@ public sealed class PeriodicExportingMetricReaderHelperTests : IDisposable
     public void CreatePeriodicExportingMetricReader_ExportIntervalMilliseconds_FromEnvVar()
     {
         var value = 789;
-        Environment.SetEnvironmentVariable(PeriodicExportingMetricReaderOptions.OTelMetricExportIntervalEnvVarKey, value.ToString(CultureInfo.InvariantCulture));
-        using var reader = CreatePeriodicExportingMetricReader();
+        Environment.SetEnvironmentVariable(PeriodicExportingMetricReaderOptions.OTelMetricExportIntervalEnvVarKey, value.ToString());
+        var reader = CreatePeriodicExportingMetricReader();
 
         Assert.Equal(value, reader.ExportIntervalMilliseconds);
     }
@@ -91,8 +90,8 @@ public sealed class PeriodicExportingMetricReaderHelperTests : IDisposable
     public void CreatePeriodicExportingMetricReader_ExportTimeoutMilliseconds_FromEnvVar()
     {
         var value = 246;
-        Environment.SetEnvironmentVariable(PeriodicExportingMetricReaderOptions.OTelMetricExportTimeoutEnvVarKey, value.ToString(CultureInfo.InvariantCulture));
-        using var reader = CreatePeriodicExportingMetricReader();
+        Environment.SetEnvironmentVariable(PeriodicExportingMetricReaderOptions.OTelMetricExportTimeoutEnvVarKey, value.ToString());
+        var reader = CreatePeriodicExportingMetricReader();
 
         Assert.Equal(value, reader.ExportTimeoutMilliseconds);
     }
@@ -134,9 +133,7 @@ public sealed class PeriodicExportingMetricReaderHelperTests : IDisposable
     {
         options ??= new();
 
-#pragma warning disable CA2000 // Dispose objects before losing scope
         var dummyMetricExporter = new InMemoryExporter<Metric>(Array.Empty<Metric>());
-#pragma warning restore CA2000 // Dispose objects before losing scope
         return PeriodicExportingMetricReaderHelper.CreatePeriodicExportingMetricReader(dummyMetricExporter, options);
     }
 }

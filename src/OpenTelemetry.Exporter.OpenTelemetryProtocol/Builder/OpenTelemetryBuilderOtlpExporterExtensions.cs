@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using Microsoft.Extensions.Configuration;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Internal;
@@ -36,9 +38,7 @@ public static class OpenTelemetryBuilderOtlpExporterExtensions
     /// <returns>Supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
     public static IOpenTelemetryBuilder UseOtlpExporter(
         this IOpenTelemetryBuilder builder)
-#pragma warning disable CA1062 // Validate arguments of public methods
         => UseOtlpExporter(builder, name: null, configuration: null, configure: null);
-#pragma warning restore CA1062 // Validate arguments of public methods
 
     /// <summary><inheritdoc cref="UseOtlpExporter(IOpenTelemetryBuilder)"/></summary>
     /// <remarks><inheritdoc cref="UseOtlpExporter(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
@@ -58,9 +58,7 @@ public static class OpenTelemetryBuilderOtlpExporterExtensions
     {
         Guard.ThrowIfNull(baseUrl);
 
-#pragma warning disable CA1062 // Validate arguments of public methods
         return UseOtlpExporter(builder, name: null, configuration: null, configure: otlpBuilder =>
-#pragma warning restore CA1062 // Validate arguments of public methods
         {
             otlpBuilder.ConfigureDefaultExporterOptions(o =>
             {
@@ -92,8 +90,8 @@ public static class OpenTelemetryBuilderOtlpExporterExtensions
     /// <para><see cref="IConfiguration"/> to bind onto <see cref="OtlpExporterBuilderOptions"/>.</para>
     /// <para>Notes:
     /// <list type="bullet">
-    /// <item docLink="true"><see href="https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md"/>
-    /// for details on the configuration schema.</item>
+    /// <item docLink="true">See [TODO:Add doc link] for details on the configuration
+    /// schema.</item>
     /// <item>The <see cref="OtlpExporterBuilderOptions"/> instance will be
     /// named "otlp" by default when calling this method.</item>
     /// </list>

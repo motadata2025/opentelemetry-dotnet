@@ -25,7 +25,7 @@ public class OpenTelemetryMetricsBuilderExtensionsTests
     public void EnableMetricsTest(bool useWithMetricsStyle)
     {
         using var meter = new Meter(Utils.GetCurrentMethodName());
-        List<Metric> exportedItems = [];
+        List<Metric> exportedItems = new();
 
         using (var host = MetricTestsBase.BuildHost(
             useWithMetricsStyle,
@@ -45,7 +45,7 @@ public class OpenTelemetryMetricsBuilderExtensionsTests
     public void EnableMetricsWithAddMeterTest(bool useWithMetricsStyle)
     {
         using var meter = new Meter(Utils.GetCurrentMethodName());
-        List<Metric> exportedItems = [];
+        List<Metric> exportedItems = new();
 
         using (var host = MetricTestsBase.BuildHost(
             useWithMetricsStyle,
@@ -71,11 +71,11 @@ public class OpenTelemetryMetricsBuilderExtensionsTests
         using var inMemoryEventListener = new InMemoryEventListener(OpenTelemetrySdkEventSource.Log);
 
         using var meter = new Meter(Utils.GetCurrentMethodName());
-        List<Metric> exportedItems = [];
+        List<Metric> exportedItems = new();
 
         var source = new MemoryConfigurationSource();
         var memory = new MemoryConfigurationProvider(source);
-        using var configuration = new ConfigurationRoot([memory]);
+        var configuration = new ConfigurationRoot(new[] { memory });
 
         using var host = MetricTestsBase.BuildHost(
             useWithMetricsStyle,
@@ -162,12 +162,12 @@ public class OpenTelemetryMetricsBuilderExtensionsTests
         using var inMemoryEventListener = new InMemoryEventListener(OpenTelemetrySdkEventSource.Log);
 
         using var meter = new Meter(Utils.GetCurrentMethodName());
-        List<Metric> exportedItems = [];
+        List<Metric> exportedItems = new();
 
         var source = new MemoryConfigurationSource();
         var memory = new MemoryConfigurationProvider(source);
         memory.Set($"Metrics:EnabledMetrics:{meter.Name}:Default", "true");
-        using var configuration = new ConfigurationRoot([memory]);
+        var configuration = new ConfigurationRoot(new[] { memory });
 
         using var host = MetricTestsBase.BuildHost(
             useWithMetricsStyle,
@@ -232,7 +232,7 @@ public class OpenTelemetryMetricsBuilderExtensionsTests
 
     private static void AssertMetricWithLongSum(Metric metric, long expectedValue = 1)
     {
-        List<MetricPoint> metricPoints = [];
+        List<MetricPoint> metricPoints = new();
         foreach (ref readonly var mp in metric.GetMetricPoints())
         {
             metricPoints.Add(mp);

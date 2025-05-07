@@ -13,24 +13,28 @@ namespace OpenTelemetry.Metrics;
 
 internal sealed class MeterProviderSdk : MeterProvider
 {
+    internal const string EmitOverFlowAttributeConfigKey = "OTEL_DOTNET_EXPERIMENTAL_METRICS_EMIT_OVERFLOW_ATTRIBUTE";
+    internal const string ReclaimUnusedMetricPointsConfigKey = "OTEL_DOTNET_EXPERIMENTAL_METRICS_RECLAIM_UNUSED_METRIC_POINTS";
     internal const string ExemplarFilterConfigKey = "OTEL_METRICS_EXEMPLAR_FILTER";
     internal const string ExemplarFilterHistogramsConfigKey = "OTEL_DOTNET_EXPERIMENTAL_METRICS_EXEMPLAR_FILTER_HISTOGRAMS";
 
     internal readonly IServiceProvider ServiceProvider;
-    internal IDisposable? OwnedServiceProvider;
+    internal readonly IDisposable? OwnedServiceProvider;
     internal int ShutdownCount;
     internal bool Disposed;
+    internal bool EmitOverflowAttribute;
+    internal bool ReclaimUnusedMetricPoints;
     internal ExemplarFilterType? ExemplarFilter;
     internal ExemplarFilterType? ExemplarFilterForHistograms;
     internal Action? OnCollectObservableInstruments;
 
-    private readonly List<object> instrumentations = [];
+    private readonly List<object> instrumentations = new();
     private readonly List<Func<Instrument, MetricStreamConfiguration?>> viewConfigs;
-    private readonly Lock collectLock = new();
+    private readonly object collectLock = new();
     private readonly MeterListener listener;
+    private readonly MetricReader? reader;
+    private readonly CompositeMetricReader? compositeMetricReader;
     private readonly Func<Instrument, bool> shouldListenTo = instrument => false;
-    private CompositeMetricReader? compositeMetricReader;
-    private MetricReader? reader;
 
     internal MeterProviderSdk(
         IServiceProvider serviceProvider,
@@ -71,7 +75,7 @@ internal sealed class MeterProviderSdk : MeterProvider
         this.viewConfigs = state.ViewConfigs;
 
         OpenTelemetrySdkEventSource.Log.MeterProviderSdkEvent(
-            $"MeterProvider configuration: {{MetricLimit={state.MetricLimit}, CardinalityLimit={state.CardinalityLimit}, ExemplarFilter={this.ExemplarFilter}, ExemplarFilterForHistograms={this.ExemplarFilterForHistograms}}}.");
+            $"MeterProvider configuration: {{MetricLimit={state.MetricLimit}, CardinalityLimit={state.CardinalityLimit}, EmitOverflowAttribute={this.EmitOverflowAttribute}, ReclaimUnusedMetricPoints={this.ReclaimUnusedMetricPoints}, ExemplarFilter={this.ExemplarFilter}, ExemplarFilterForHistograms={this.ExemplarFilterForHistograms}}}.");
 
         foreach (var reader in state.Readers)
         {
@@ -82,6 +86,8 @@ internal sealed class MeterProviderSdk : MeterProvider
             reader.ApplyParentProviderSettings(
                 state.MetricLimit,
                 state.CardinalityLimit,
+                this.EmitOverflowAttribute,
+                this.ReclaimUnusedMetricPoints,
                 this.ExemplarFilter,
                 this.ExemplarFilterForHistograms);
 
@@ -143,12 +149,12 @@ internal sealed class MeterProviderSdk : MeterProvider
         }
 
         // Setup Listener
-        if (state.MeterSources.Exists(WildcardHelper.ContainsWildcard))
+        if (state.MeterSources.Any(s => WildcardHelper.ContainsWildcard(s)))
         {
             var regex = WildcardHelper.GetWildcardRegex(state.MeterSources);
             this.shouldListenTo = instrument => regex.IsMatch(instrument.Meter.Name);
         }
-        else if (state.MeterSources.Count > 0)
+        else if (state.MeterSources.Any())
         {
             var meterSourcesToSubscribe = new HashSet<string>(state.MeterSources, StringComparer.OrdinalIgnoreCase);
             this.shouldListenTo = instrument => meterSourcesToSubscribe.Contains(instrument.Meter.Name);
@@ -451,25 +457,24 @@ internal sealed class MeterProviderSdk : MeterProvider
         {
             if (disposing)
             {
-                foreach (var item in this.instrumentations)
+                if (this.instrumentations != null)
                 {
-                    (item as IDisposable)?.Dispose();
-                }
+                    foreach (var item in this.instrumentations)
+                    {
+                        (item as IDisposable)?.Dispose();
+                    }
 
-                this.instrumentations.Clear();
+                    this.instrumentations.Clear();
+                }
 
                 // Wait for up to 5 seconds grace period
                 this.reader?.Shutdown(5000);
                 this.reader?.Dispose();
-                this.reader = null;
-
                 this.compositeMetricReader?.Dispose();
-                this.compositeMetricReader = null;
 
                 this.listener?.Dispose();
 
                 this.OwnedServiceProvider?.Dispose();
-                this.OwnedServiceProvider = null;
             }
 
             this.Disposed = true;
@@ -481,6 +486,16 @@ internal sealed class MeterProviderSdk : MeterProvider
 
     private void ApplySpecificationConfigurationKeys(IConfiguration configuration)
     {
+        if (configuration.TryGetBoolValue(OpenTelemetrySdkEventSource.Log, EmitOverFlowAttributeConfigKey, out this.EmitOverflowAttribute))
+        {
+            OpenTelemetrySdkEventSource.Log.MeterProviderSdkEvent("Overflow attribute feature enabled via configuration.");
+        }
+
+        if (configuration.TryGetBoolValue(OpenTelemetrySdkEventSource.Log, ReclaimUnusedMetricPointsConfigKey, out this.ReclaimUnusedMetricPoints))
+        {
+            OpenTelemetrySdkEventSource.Log.MeterProviderSdkEvent("Reclaim unused metric point feature enabled via configuration.");
+        }
+
         var hasProgrammaticExemplarFilterValue = this.ExemplarFilter.HasValue;
 
         if (configuration.TryGetStringValue(ExemplarFilterConfigKey, out var configValue))

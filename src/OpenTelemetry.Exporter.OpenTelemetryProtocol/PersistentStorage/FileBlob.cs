@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics.CodeAnalysis;
 using OpenTelemetry.Internal;
 using OpenTelemetry.PersistentStorage.Abstractions;
@@ -58,7 +60,7 @@ public class FileBlob : PersistentBlob
     {
         Guard.ThrowIfNull(buffer);
 
-        var path = this.FullPath + ".tmp";
+        string path = this.FullPath + ".tmp";
 
         try
         {

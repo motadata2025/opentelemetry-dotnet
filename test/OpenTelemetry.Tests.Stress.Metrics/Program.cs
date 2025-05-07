@@ -8,7 +8,7 @@ using OpenTelemetry.Metrics;
 
 namespace OpenTelemetry.Tests.Stress;
 
-internal static class Program
+public static class Program
 {
     private enum MetricsStressTestType
     {
@@ -24,9 +24,7 @@ internal static class Program
         return StressTestFactory.RunSynchronously<MetricsStressTest, MetricsStressTestOptions>(args);
     }
 
-#pragma warning disable CA1812 // Avoid uninstantiated internal classes
-    private sealed class MetricsStressTest : StressTests<MetricsStressTestOptions>
-#pragma warning restore CA1812 // Avoid uninstantiated internal classes
+    private sealed class MetricsStressTest : StressTest<MetricsStressTestOptions>
     {
         private const int ArraySize = 10;
         private const int MaxHistogramMeasurement = 1000;
@@ -53,7 +51,7 @@ internal static class Program
 
             if (options.PrometheusTestMetricsPort != 0)
             {
-                builder.AddPrometheusHttpListener(o => o.UriPrefixes = [$"http://localhost:{options.PrometheusTestMetricsPort}/"]);
+                builder.AddPrometheusHttpListener(o => o.UriPrefixes = new string[] { $"http://localhost:{options.PrometheusTestMetricsPort}/" });
             }
 
             if (options.EnableExemplars)
@@ -64,8 +62,8 @@ internal static class Program
             if (options.AddViewToFilterTags)
             {
                 builder
-                    .AddView("TestCounter", new MetricStreamConfiguration { TagKeys = ["DimName1"] })
-                    .AddView("TestHistogram", new MetricStreamConfiguration { TagKeys = ["DimName1"] });
+                    .AddView("TestCounter", new MetricStreamConfiguration { TagKeys = new string[] { "DimName1" } })
+                    .AddView("TestHistogram", new MetricStreamConfiguration { TagKeys = new string[] { "DimName1" } });
             }
 
             if (options.AddOtlpExporter)
@@ -77,16 +75,6 @@ internal static class Program
             }
 
             this.meterProvider = builder.Build();
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                this.meterProvider.Dispose();
-            }
-
-            base.Dispose(disposing);
         }
 
         protected override void WriteRunInformationToConsole()
@@ -103,7 +91,6 @@ internal static class Program
             if (this.Options.TestType == MetricsStressTestType.Histogram)
             {
                 TestHistogram.Record(
-#pragma warning disable CA5394 // Do not use random number generators in secure applications
                     random.Next(MaxHistogramMeasurement),
                     new("DimName1", DimensionValues[random.Next(0, ArraySize)]),
                     new("DimName2", DimensionValues[random.Next(0, ArraySize)]),
@@ -116,14 +103,21 @@ internal static class Program
                    new("DimName1", DimensionValues[random.Next(0, ArraySize)]),
                    new("DimName2", DimensionValues[random.Next(0, ArraySize)]),
                    new("DimName3", DimensionValues[random.Next(0, ArraySize)]));
-#pragma warning restore CA5394 // Do not use random number generators in secure applications
             }
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            if (isDisposing)
+            {
+                this.meterProvider.Dispose();
+            }
+
+            base.Dispose(isDisposing);
         }
     }
 
-#pragma warning disable CA1812 // Avoid uninstantiated internal classes
     private sealed class MetricsStressTestOptions : StressTestOptions
-#pragma warning restore CA1812 // Avoid uninstantiated internal classes
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
         [Option('t', "type", HelpText = "The metrics stress test type to run. Valid values: [Histogram, Counter]. Default value: Histogram.", Required = false)]

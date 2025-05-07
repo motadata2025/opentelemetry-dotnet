@@ -6,7 +6,7 @@ using Xunit;
 
 namespace OpenTelemetry.Trace.Tests;
 
-public sealed class CurrentSpanTests : IDisposable
+public class CurrentSpanTests : IDisposable
 {
     private readonly Tracer tracer;
 
@@ -15,7 +15,7 @@ public sealed class CurrentSpanTests : IDisposable
         Activity.DefaultIdFormat = ActivityIdFormat.W3C;
         Activity.ForceDefaultIdFormat = true;
 
-        this.tracer = TracerProvider.Default.GetTracer(null!);
+        this.tracer = TracerProvider.Default.GetTracer(null);
     }
 
     [Fact]
@@ -27,8 +27,7 @@ public sealed class CurrentSpanTests : IDisposable
     [Fact]
     public void CurrentSpan_WhenActivityExists()
     {
-        using var activity = new Activity("foo");
-        activity.Start();
+        using var activity = new Activity("foo").Start();
         Assert.True(Tracer.CurrentSpan.Context.IsValid);
     }
 

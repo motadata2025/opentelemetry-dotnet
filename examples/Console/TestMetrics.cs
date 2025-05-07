@@ -10,12 +10,12 @@ using OpenTelemetry.Resources;
 
 namespace Examples.Console;
 
-internal sealed class TestMetrics
+internal class TestMetrics
 {
-    internal static int Run(MetricsOptions options)
+    internal static object Run(MetricsOptions options)
     {
         var meterVersion = "1.0";
-        var meterTags = new List<KeyValuePair<string, object?>>
+        var meterTags = new List<KeyValuePair<string, object>>
         {
             new(
                 "MeterTagKey",
@@ -27,7 +27,7 @@ internal sealed class TestMetrics
             .ConfigureResource(r => r.AddService("myservice"))
             .AddMeter(meter.Name); // All instruments from this meter are enabled.
 
-        if ("otlp".Equals(options.UseExporter, StringComparison.OrdinalIgnoreCase))
+        if (options.UseExporter.Equals("otlp", StringComparison.OrdinalIgnoreCase))
         {
             /*
              * Prerequisite to run this example:
@@ -37,10 +37,10 @@ internal sealed class TestMetrics
              * launch the OpenTelemetry Collector with an OTLP receiver, by running:
              *
              *  - On Unix based systems use:
-             *     docker run --rm -it -p 4317:4317 -v $(pwd):/cfg otel/opentelemetry-collector:0.123.0 --config=/cfg/otlp-collector-example/config.yaml
+             *     docker run --rm -it -p 4317:4317 -v $(pwd):/cfg otel/opentelemetry-collector:0.33.0 --config=/cfg/otlp-collector-example/config.yaml
              *
              *  - On Windows use:
-             *     docker run --rm -it -p 4317:4317 -v "%cd%":/cfg otel/opentelemetry-collector:0.123.0 --config=/cfg/otlp-collector-example/config.yaml
+             *     docker run --rm -it -p 4317:4317 -v "%cd%":/cfg otel/opentelemetry-collector:0.33.0 --config=/cfg/otlp-collector-example/config.yaml
              *
              * Open another terminal window at the examples/Console/ directory and
              * launch the OTLP example by running:
@@ -79,13 +79,13 @@ internal sealed class TestMetrics
 
         using var provider = providerBuilder.Build();
 
-        Counter<int>? counter = null;
+        Counter<int> counter = null;
         if (options.FlagCounter ?? true)
         {
             counter = meter.CreateCounter<int>("counter", "things", "A count of things");
         }
 
-        Histogram<int>? histogram = null;
+        Histogram<int> histogram = null;
         if (options.FlagHistogram ?? false)
         {
             histogram = meter.CreateHistogram<int>("histogram");
@@ -97,9 +97,9 @@ internal sealed class TestMetrics
             {
                 return new List<Measurement<int>>()
                 {
-                    new(
+                    new Measurement<int>(
                         (int)Process.GetCurrentProcess().PrivateMemorySize64,
-                        new KeyValuePair<string, object?>("tag1", "value1")),
+                        new KeyValuePair<string, object>("tag1", "value1")),
                 };
             });
         }
@@ -111,45 +111,45 @@ internal sealed class TestMetrics
 
             histogram?.Record(
                 100,
-                new KeyValuePair<string, object?>("tag1", "value1"));
+                new KeyValuePair<string, object>("tag1", "value1"));
 
             histogram?.Record(
                 200,
-                new KeyValuePair<string, object?>("tag1", "value2"),
-                new KeyValuePair<string, object?>("tag2", "value2"));
+                new KeyValuePair<string, object>("tag1", "value2"),
+                new KeyValuePair<string, object>("tag2", "value2"));
 
             histogram?.Record(
                 100,
-                new KeyValuePair<string, object?>("tag1", "value1"));
+                new KeyValuePair<string, object>("tag1", "value1"));
 
             histogram?.Record(
                 200,
-                new KeyValuePair<string, object?>("tag2", "value2"),
-                new KeyValuePair<string, object?>("tag1", "value2"));
+                new KeyValuePair<string, object>("tag2", "value2"),
+                new KeyValuePair<string, object>("tag1", "value2"));
 
             counter?.Add(10);
 
             counter?.Add(
                 100,
-                new KeyValuePair<string, object?>("tag1", "value1"));
+                new KeyValuePair<string, object>("tag1", "value1"));
 
             counter?.Add(
                 200,
-                new KeyValuePair<string, object?>("tag1", "value2"),
-                new KeyValuePair<string, object?>("tag2", "value2"));
+                new KeyValuePair<string, object>("tag1", "value2"),
+                new KeyValuePair<string, object>("tag2", "value2"));
 
             counter?.Add(
                 100,
-                new KeyValuePair<string, object?>("tag1", "value1"));
+                new KeyValuePair<string, object>("tag1", "value1"));
 
             counter?.Add(
                 200,
-                new KeyValuePair<string, object?>("tag2", "value2"),
-                new KeyValuePair<string, object?>("tag1", "value2"));
+                new KeyValuePair<string, object>("tag2", "value2"),
+                new KeyValuePair<string, object>("tag1", "value2"));
 
             Task.Delay(500).Wait();
         }
 
-        return 0;
+        return null;
     }
 }

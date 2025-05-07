@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 namespace OpenTelemetry.Internal;
 
 internal abstract class ArrayTagWriter<TArrayState>
@@ -19,6 +21,4 @@ internal abstract class ArrayTagWriter<TArrayState>
     public abstract void WriteStringValue(ref TArrayState state, ReadOnlySpan<char> value);
 
     public abstract void EndWriteArray(ref TArrayState state);
-
-    public virtual bool TryResize() => false;
 }

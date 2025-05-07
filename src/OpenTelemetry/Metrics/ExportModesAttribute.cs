@@ -9,17 +9,19 @@ namespace OpenTelemetry.Metrics;
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 public sealed class ExportModesAttribute : Attribute
 {
+    private readonly ExportModes supportedExportModes;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ExportModesAttribute"/> class.
     /// </summary>
     /// <param name="supported"><see cref="ExportModes"/>.</param>
     public ExportModesAttribute(ExportModes supported)
     {
-        this.Supported = supported;
+        this.supportedExportModes = supported;
     }
 
     /// <summary>
     /// Gets the supported <see cref="ExportModes"/>.
     /// </summary>
-    public ExportModes Supported { get; }
+    public ExportModes Supported => this.supportedExportModes;
 }

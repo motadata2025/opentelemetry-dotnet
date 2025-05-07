@@ -12,6 +12,6 @@ public class ErrorController : Controller
     [HttpGet]
     public string Get()
     {
-        throw new InvalidOperationException("something's wrong!");
+        throw new Exception("something's wrong!");
     }
 }

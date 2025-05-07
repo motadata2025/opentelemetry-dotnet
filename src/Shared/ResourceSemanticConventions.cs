@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 namespace OpenTelemetry.Resources;
 
 internal static class ResourceSemanticConventions

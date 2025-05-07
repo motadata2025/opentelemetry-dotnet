@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Reflection;
 using Xunit;
 
@@ -25,7 +27,7 @@ public class AssemblyVersionExtensionsTests
         Assert.Equal(expectedVersion, actualVersion);
     }
 
-    private sealed class TestAssembly(string informationalVersion) : Assembly
+    private class TestAssembly(string informationalVersion) : Assembly
     {
         public override object[] GetCustomAttributes(Type attributeType, bool inherit)
         {

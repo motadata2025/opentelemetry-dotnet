@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics;
 using OpenTelemetry.Context.Propagation;
 
@@ -34,7 +36,7 @@ public readonly struct SpanContext : IEquatable<SpanContext>
         bool isRemote = false,
         IEnumerable<KeyValuePair<string, string>>? traceState = null)
     {
-        this.ActivityContext = new ActivityContext(traceId, spanId, traceFlags, TraceStateUtils.GetString(traceState), isRemote);
+        this.ActivityContext = new ActivityContext(traceId, spanId, traceFlags, TraceStateUtilsNew.GetString(traceState), isRemote);
     }
 
     /// <summary>
@@ -83,14 +85,13 @@ public readonly struct SpanContext : IEquatable<SpanContext>
     {
         get
         {
-            var traceState = this.ActivityContext.TraceState;
-            if (string.IsNullOrEmpty(traceState))
+            if (string.IsNullOrEmpty(this.ActivityContext.TraceState))
             {
-                return [];
+                return Enumerable.Empty<KeyValuePair<string, string>>();
             }
 
             var traceStateResult = new List<KeyValuePair<string, string>>();
-            TraceStateUtils.AppendTraceState(traceState!, traceStateResult);
+            TraceStateUtilsNew.AppendTraceState(this.ActivityContext.TraceState, traceStateResult);
             return traceStateResult;
         }
     }
@@ -99,9 +100,7 @@ public readonly struct SpanContext : IEquatable<SpanContext>
     /// Converts a <see cref="SpanContext"/> into an <see cref="ActivityContext"/>.
     /// </summary>
     /// <param name="spanContext"><see cref="SpanContext"/> source.</param>
-#pragma warning disable CA2225 // Operator overloads have named alternates
     public static implicit operator ActivityContext(SpanContext spanContext)
-#pragma warning restore CA2225 // Operator overloads have named alternates
         => spanContext.ActivityContext;
 
     /// <summary>

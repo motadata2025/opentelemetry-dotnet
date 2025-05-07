@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 using System.Diagnostics;
 #if NETFRAMEWORK
 using System.Net.Http;
@@ -26,15 +28,11 @@ public class OtlpExporterOptions : IOtlpExporterOptions
 {
     internal const string DefaultGrpcEndpoint = "http://localhost:4317";
     internal const string DefaultHttpEndpoint = "http://localhost:4318";
-#if NET462_OR_GREATER || NETSTANDARD2_0
-    internal const OtlpExportProtocol DefaultOtlpExportProtocol = OtlpExportProtocol.HttpProtobuf;
-#else
     internal const OtlpExportProtocol DefaultOtlpExportProtocol = OtlpExportProtocol.Grpc;
-#endif
 
     internal static readonly KeyValuePair<string, string>[] StandardHeaders = new KeyValuePair<string, string>[]
     {
-        new("User-Agent", GetUserAgentString()),
+        new KeyValuePair<string, string>("User-Agent", GetUserAgentString()),
     };
 
     internal readonly Func<HttpClient> DefaultHttpClientFactory;
@@ -88,9 +86,7 @@ public class OtlpExporterOptions : IOtlpExporterOptions
         {
             if (this.endpoint == null)
             {
-#pragma warning disable CS0618 // Suppressing gRPC obsolete warning
                 return this.Protocol == OtlpExportProtocol.Grpc
-#pragma warning restore CS0618 // Suppressing gRPC obsolete warning
                     ? new Uri(DefaultGrpcEndpoint)
                     : new Uri(DefaultHttpEndpoint);
             }

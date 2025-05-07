@@ -1,28 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(TargetFrameworksForTests)</TargetFrameworks>
-    <AnalysisLevel>latest-all</AnalysisLevel>
+    <!-- this is temporary. will remove in future PR. -->
+    <Nullable>disable</Nullable>
   </PropertyGroup>
-
-  <!-- Add MSBuild Task to Generate Certificates -->
-  <Target Name="GenerateTestCertificates" BeforeTargets="Publish">
-    <Exec Condition="$(OS) == 'Unix'"
-      Command="/bin/bash gen_test_cert.sh $(IntermediateOutputPath)"
-      ConsoleToMsBuild="true"
-      WorkingDirectory="$(ProjectDir)" />
-
-    <Exec Condition="$(OS) == 'Windows_NT'"
-      Command="pwsh -NonInteractive -executionpolicy Unrestricted -command &quot;&amp; { ./gen_test_cert.ps1 -OutDir $(IntermediateOutputPath) } &quot;"
-      ConsoleToMsBuild="true"
-      WorkingDirectory="$(ProjectDir)" />
-
-    <ItemGroup>
-      <TestCertificates Include="$(IntermediateOutputPath)*.pem"/>
-    </ItemGroup>
-
-    <Copy SourceFiles="@(TestCertificates)" DestinationFolder="$(PublishDir)/%(RecursiveDir)"/>
-  </Target>
 
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore.Server" Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'" />
@@ -31,11 +13,9 @@
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="All" />
-    <PackageReference Include="Grpc.Net.Client" />
-    <PackageReference Include="Grpc" />
-    <PackageReference Include="Google.Protobuf" />
-    <PackageReference Include="Grpc.Tools" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="All">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -48,15 +28,10 @@
     <Compile Include="$(RepoRoot)\test\OpenTelemetry.Tests\Shared\DelegatingExporter.cs" Link="Includes\DelegatingExporter.cs" />
     <Compile Include="$(RepoRoot)\test\OpenTelemetry.Tests\Shared\EventSourceTestHelper.cs" Link="Includes\EventSourceTestHelper.cs" />
     <Compile Include="$(RepoRoot)\test\OpenTelemetry.Tests\Shared\SkipUnlessEnvVarFoundTheoryAttribute.cs" Link="Includes\SkipUnlessEnvVarFoundTheoryAttribute.cs" />
+    <Compile Include="$(RepoRoot)\test\OpenTelemetry.Tests\Shared\SkipUnlessEnvVarFoundFactAttribute.cs" Link="Includes\SkipUnlessEnvVarFoundFactAttribute.cs" />
     <Compile Include="$(RepoRoot)\test\OpenTelemetry.Tests\Shared\TestActivityProcessor.cs" Link="Includes\TestActivityProcessor.cs" />
     <Compile Include="$(RepoRoot)\test\OpenTelemetry.Tests\Shared\TestEventListener.cs" Link="Includes\TestEventListener.cs" />
     <Compile Include="$(RepoRoot)\test\OpenTelemetry.Tests\Shared\Utils.cs" Link="Includes\Utils.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="$(RepoRoot)\src\Shared\Proto\**\*.proto" Link="Proto\%(RecursiveDir)%(Filename)%(Extension)" Access="internal">
-      <ProtoRoot>$(RepoRoot)\src\Shared\Proto</ProtoRoot>
-    </Protobuf>
   </ItemGroup>
 
 </Project>

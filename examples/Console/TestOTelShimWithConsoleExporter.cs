@@ -7,17 +7,17 @@ using OpenTelemetry.Trace;
 
 namespace Examples.Console;
 
-internal sealed class TestOTelShimWithConsoleExporter
+internal class TestOTelShimWithConsoleExporter
 {
-    internal static int Run(OpenTelemetryShimOptions options)
+    internal static object Run(OpenTelemetryShimOptions options)
     {
         // Enable OpenTelemetry for the source "MyCompany.MyProduct.MyWebServer"
         // and use a single pipeline with a custom MyProcessor, and Console exporter.
         using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource("MyCompany.MyProduct.MyWebServer")
-            .ConfigureResource(r => r.AddService("MyServiceName"))
-            .AddConsoleExporter()
-            .Build();
+                .AddSource("MyCompany.MyProduct.MyWebServer")
+                .ConfigureResource(r => r.AddService("MyServiceName"))
+                .AddConsoleExporter()
+                .Build();
 
         // The above line is required only in applications
         // which decide to use OpenTelemetry.
@@ -40,6 +40,6 @@ internal sealed class TestOTelShimWithConsoleExporter
         System.Console.WriteLine("Press Enter key to exit.");
         System.Console.ReadLine();
 
-        return 0;
+        return null;
     }
 }

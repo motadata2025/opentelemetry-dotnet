@@ -6,7 +6,7 @@ using Xunit;
 
 namespace OpenTelemetry.Resources.Tests;
 
-public sealed class OtelServiceNameEnvVarDetectorTests : IDisposable
+public class OtelServiceNameEnvVarDetectorTests : IDisposable
 {
     public OtelServiceNameEnvVarDetectorTests()
     {
@@ -57,7 +57,7 @@ public sealed class OtelServiceNameEnvVarDetectorTests : IDisposable
     [Fact]
     public void OtelServiceNameEnvVar_UsingIConfiguration()
     {
-        var values = new Dictionary<string, string?>()
+        var values = new Dictionary<string, string>()
         {
             [OtelServiceNameEnvVarDetector.EnvVarKey] = "my-service",
         };

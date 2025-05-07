@@ -10,9 +10,9 @@ namespace OpenTelemetry.Exporter;
 public class ConsoleLogRecordExporter : ConsoleExporter<LogRecord>
 {
     private const int RightPaddingLength = 35;
-    private readonly Lock syncObject = new();
+    private readonly object syncObject = new();
     private bool disposed;
-    private string? disposedStackTrace;
+    private string disposedStackTrace;
     private bool isDisposeMessageSent;
 
     public ConsoleLogRecordExporter(ConsoleExporterOptions options)
@@ -38,8 +38,8 @@ public class ConsoleLogRecordExporter : ConsoleExporter<LogRecord>
 
                 this.WriteLine("The console exporter is still being invoked after it has been disposed. This could be due to the application's incorrect lifecycle management of the LoggerFactory/OpenTelemetry .NET SDK.");
                 this.WriteLine(Environment.StackTrace);
-                this.WriteLine($"{Environment.NewLine}Dispose was called on the following stack trace:");
-                this.WriteLine(this.disposedStackTrace!);
+                this.WriteLine(Environment.NewLine + "Dispose was called on the following stack trace:");
+                this.WriteLine(this.disposedStackTrace);
             }
 
             return ExportResult.Failure;
@@ -89,8 +89,8 @@ public class ConsoleLogRecordExporter : ConsoleExporter<LogRecord>
                     // Special casing {OriginalFormat}
                     // See https://github.com/open-telemetry/opentelemetry-dotnet/pull/3182
                     // for explanation.
-                    var valueToTransform = logRecord.Attributes[i].Key.Equals("{OriginalFormat}", StringComparison.Ordinal)
-                        ? new KeyValuePair<string, object?>("OriginalFormat (a.k.a Body)", logRecord.Attributes[i].Value)
+                    var valueToTransform = logRecord.Attributes[i].Key.Equals("{OriginalFormat}")
+                        ? new KeyValuePair<string, object>("OriginalFormat (a.k.a Body)", logRecord.Attributes[i].Value)
                         : logRecord.Attributes[i];
 
                     if (this.TagWriter.TryTransformTag(valueToTransform, out var result))
@@ -125,7 +125,7 @@ public class ConsoleLogRecordExporter : ConsoleExporter<LogRecord>
                     exporter.WriteLine("LogRecord.ScopeValues (Key:Value):");
                 }
 
-                foreach (KeyValuePair<string, object?> scopeItem in scope)
+                foreach (KeyValuePair<string, object> scopeItem in scope)
                 {
                     if (this.TagWriter.TryTransformTag(scopeItem, out var result))
                     {
@@ -137,10 +137,10 @@ public class ConsoleLogRecordExporter : ConsoleExporter<LogRecord>
             var resource = this.ParentProvider.GetResource();
             if (resource != Resource.Empty)
             {
-                this.WriteLine($"{Environment.NewLine}Resource associated with LogRecord:");
+                this.WriteLine("\nResource associated with LogRecord:");
                 foreach (var resourceAttribute in resource.Attributes)
                 {
-                    if (this.TagWriter.TryTransformTag(resourceAttribute.Key, resourceAttribute.Value, out var result))
+                    if (this.TagWriter.TryTransformTag(resourceAttribute, out var result))
                     {
                         this.WriteLine($"{result.Key}: {result.Value}");
                     }

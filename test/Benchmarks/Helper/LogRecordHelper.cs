@@ -1,13 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-using Benchmarks.Logs;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 
 namespace Benchmarks.Helper;
 
-internal static class LogRecordHelper
+internal class LogRecordHelper
 {
     internal static LogRecord CreateTestLogRecord()
     {
@@ -19,7 +18,7 @@ internal static class LogRecordHelper
             }));
 
         var logger = factory.CreateLogger("TestLogger");
-        logger.HelloFrom("artichoke", 3.99);
+        logger.LogInformation("Hello from {Food} {Price}.", "artichoke", 3.99);
         return items[0];
     }
 }

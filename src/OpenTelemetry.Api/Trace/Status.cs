@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+#nullable enable
+
 namespace OpenTelemetry.Trace;
 
 /// <summary>
@@ -86,11 +88,7 @@ public readonly struct Status : IEquatable<Status>
         unchecked
         {
             hash = (31 * hash) + this.StatusCode.GetHashCode();
-#if NET
-            hash = (31 * hash) + (this.Description?.GetHashCode(StringComparison.Ordinal) ?? 0);
-#else
             hash = (31 * hash) + (this.Description?.GetHashCode() ?? 0);
-#endif
         }
 
         return hash;
