@@ -30,14 +30,12 @@
     <PackageReference Include="Google.Protobuf" />
     <PackageReference Include="Grpc.Tools" PrivateAssets="All" />
     <PackageReference Include="IronSnappy" />
+    <PackageReference Include="System.Text.Json"/>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.Net.Http" Condition="'$(TargetFramework)' == '$(NetFrameworkMinimumSupportedVersion)'" />
-    <Reference Include="System.Text.Json">
-      <HintPath>..\..\..\..\..\.nuget\packages\system.text.json\4.7.2\lib\netstandard2.0\System.Text.Json.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
