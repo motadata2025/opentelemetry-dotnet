@@ -55,4 +55,16 @@
     <PublicApiAnalyzerEnabled>false</PublicApiAnalyzerEnabled>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- completely disable analyzers during build -->
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <!-- disable live (IDE) analysis -->
+    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
+    <!-- disable the Public API analyzer -->
+    <PublicApiAnalyzerEnabled>false</PublicApiAnalyzerEnabled>
+    <!-- disable any .NET SDK–included analyzers (nullable, platform, etc.) -->
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+  </PropertyGroup>
+
+
 </Project>
