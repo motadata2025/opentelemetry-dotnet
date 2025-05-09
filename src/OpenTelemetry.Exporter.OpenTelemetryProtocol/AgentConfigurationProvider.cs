@@ -6,8 +6,15 @@ using System.Text.Json;
 
 namespace OpenTelemetry.Exporter.OpenTelemetryProtocol;
 
+/// <summary>
+/// Loads and returns the agent’s configuration from json file.
+/// </summary>
 public class AgentConfigurationProvider
 {
+    /// <summary>
+    /// Reads the configuration file at <paramref name="configPath"/> for the service
+    /// identified by <paramref name="serviceName"/>.
+    /// </summary>
     public AgentConfig GetConfiguration(string configPath, string serviceName)
     {
         if (!File.Exists(configPath))
@@ -43,10 +50,28 @@ public class AgentConfigurationProvider
     }
 }
 
+/// <summary>
+/// Represents the configuration settings for the trace agent.
+/// </summary>
 public class AgentConfig
 {
+    /// <summary>
+    /// The current state of the agent process.
+    /// </summary>
     public string AgentState { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The desired state for the agent’s service (e.g. Running, Stopped).
+    /// </summary>
     public string AgentServiceStatus { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The status of the trace‐agent connection.
+    /// </summary>
     public string TraceAgentStatus { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The service’s trace‐collection state (e.g. Enabled, Disabled).
+    /// </summary>
     public string ServiceTraceState { get; set; } = string.Empty;
 }
