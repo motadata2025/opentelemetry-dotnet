@@ -27,29 +27,29 @@ public class OtlpTraceExporter : BaseExporter<Activity>
 
     private AgentConfigurationProvider agentConfigurationProvider;
 
-    private static string DEFAULT_SERVICE_NAME = "unknown_service";
+    private static string defaultServiceName = "unknown_service";
 
     private string serviceName;
 
-    private static readonly int SERVICE_CHECK_INTERVAL = GetIntervalToCheckConfiguration();
+    private static readonly int serviceCheckInterval = GetIntervalToCheckConfiguration();
 
     private Timer timer;
 
     private volatile bool isShutdown;
 
     // vars for Path/Dir
-    private static readonly string PATH_SEPARATOR = Path.DirectorySeparatorChar.ToString();
+    private static readonly string pathSeparator = Path.DirectorySeparatorChar.ToString();
 
-    private static readonly string CONFIG_DIR = "config";
+    private static readonly string configDir = "config";
 
-    private static readonly string AGENT_INSTALL_DIR = GetAgentDirectory();
+    private static readonly string agentInstallDir = GetAgentDirectory();
 
-    private static readonly string DATA_DIR = AGENT_INSTALL_DIR + "cache" + PATH_SEPARATOR;
+    private static readonly string dataDir = agentInstallDir + "cache" + pathSeparator;
 
-    private static string TRACE_FILE_FORMAT = "trace-{0}-{1}.cache";
+    private static string traceFileFormat = "trace-{0}-{1}.cache";
 
     // Constants for ENV var
-    private static readonly string ENV_MOTADATA_TRACE_SERVICE_CHECK_TIME = "MOTADATA_TRACE_SERVICE_CHECK_TIME_SEC";
+    private static readonly string envMotadataTraceServiceCheckTime = "MOTADATA_TRACE_SERVICE_CHECK_TIME_SEC";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OtlpTraceExporter"/> class.
@@ -81,7 +81,6 @@ public class OtlpTraceExporter : BaseExporter<Activity>
         this.transmissionHandler = transmissionHandler ?? exporterOptions.GetTraceExportTransmissionHandler(experimentalOptions);
 
         this.agentConfigurationProvider = new AgentConfigurationProvider();
-
     }
 
     internal OtlpResource.Resource ProcessResource => this.processResource ??= this.ParentProvider.GetResource().ToOtlpResource();
@@ -89,7 +88,7 @@ public class OtlpTraceExporter : BaseExporter<Activity>
     /// <inheritdoc/>
     public override ExportResult Export(in Batch<Activity> activityBatch)
     {
-        Console.WriteLine("printing the path separator : " + PATH_SEPARATOR);
+        Console.WriteLine("printing the path separator : " + pathSeparator);
         // Prevents the exporter's gRPC and HTTP operations from being instrumented.
         using var scope = SuppressInstrumentationScope.Begin();
 
@@ -126,8 +125,8 @@ public class OtlpTraceExporter : BaseExporter<Activity>
                 Console.WriteLine("After reverse engineering");
                 Console.WriteLine(json);
                 long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                string fileName = string.Format(TRACE_FILE_FORMAT, this.serviceName, timestamp);
-                string filePath = Path.Combine(DATA_DIR, fileName);
+                string fileName = string.Format(traceFileFormat, this.serviceName, timestamp);
+                string filePath = Path.Combine(dataDir, fileName);
 
                 // Write the compressed trace data to file.
                 File.WriteAllBytes(filePath, compressData);
@@ -165,20 +164,20 @@ public class OtlpTraceExporter : BaseExporter<Activity>
     {
         var otelfolder = GetEnvironmentVariable("MOTADATA_INSTALLATION_PATH", true);
         Console.WriteLine("Agent Directory : " + otelfolder);
-       return otelfolder + PATH_SEPARATOR;
+       return otelfolder + pathSeparator;
     }
 
     private void SetServiceName()
     {
         var name = GetEnvironmentVariable("OTEL_SERVICE_NAME");
-        this.serviceName = string.IsNullOrEmpty(name) ? DEFAULT_SERVICE_NAME : name;
+        this.serviceName = string.IsNullOrEmpty(name) ? defaultServiceName : name;
         Console.WriteLine("Service name : " + this.serviceName);
     }
 
 
     private static int GetIntervalToCheckConfiguration()
     {
-        var value = GetEnvironmentVariable(ENV_MOTADATA_TRACE_SERVICE_CHECK_TIME);
+        var value = GetEnvironmentVariable(envMotadataTraceServiceCheckTime);
         if (string.IsNullOrEmpty(value))
         {
             return 30;
@@ -196,13 +195,13 @@ public class OtlpTraceExporter : BaseExporter<Activity>
 
     private void ScheduleJobToCheckConfiguration()
     {
-        timer = new Timer(UpdateExportFlag, null, 0, SERVICE_CHECK_INTERVAL * 1000);
+        timer = new Timer(UpdateExportFlag, null, 0, serviceCheckInterval * 1000);
     }
 
     private void UpdateExportFlag(object state)
     {
         Console.WriteLine("Updating export flag..........................");
-        string configPath = AGENT_INSTALL_DIR +CONFIG_DIR + PATH_SEPARATOR + "agent.json";
+        string configPath = agentInstallDir +configDir + pathSeparator + "agent.json";
         Console.WriteLine("config path for agent json: " + configPath);
 
         var agentConfig = new AgentConfigurationProvider().GetConfiguration(configPath, serviceName);
@@ -218,7 +217,6 @@ public class OtlpTraceExporter : BaseExporter<Activity>
         Console.WriteLine("Agent configuration status: " + agentConfig.AgentState);
         Console.WriteLine("Agent Trace status: " + agentConfig.TraceAgentStatus);
         Console.WriteLine("Service Trace state: " + agentConfig.ServiceTraceState);
-
 
         isShutdown = !isAgentRunning;
     }
