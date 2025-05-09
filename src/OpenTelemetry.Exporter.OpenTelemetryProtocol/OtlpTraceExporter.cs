@@ -236,6 +236,7 @@ public class OtlpTraceExporter : BaseExporter<Activity>
                 Console.Error.WriteLine($"Environment variable {variable} is not defined.");
                 throw new InvalidOperationException($"Unable to determine the environment variable : {variable}");
             }
+            Console.WriteLine(ex.Message.ToString());
         }
         return envValue;
     }
