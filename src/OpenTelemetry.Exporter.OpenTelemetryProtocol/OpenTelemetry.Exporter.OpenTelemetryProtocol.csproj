@@ -51,4 +51,8 @@
     </Protobuf>
   </ItemGroup>
 
+  <PropertyGroup>
+    <PublicApiAnalyzerEnabled>false</PublicApiAnalyzerEnabled>
+  </PropertyGroup>
+
 </Project>
