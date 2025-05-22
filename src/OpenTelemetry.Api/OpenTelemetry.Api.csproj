@@ -5,7 +5,7 @@
     <RootNamespace>OpenTelemetry</RootNamespace>
     <MinVerTagPrefix>core-</MinVerTagPrefix>
     <AnalysisLevel>latest-all</AnalysisLevel>
-    <NoWarn>$(NoWarn);CA1031</NoWarn>
+    <NoWarn>$(NoWarn);CA1031;RS0041</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
