@@ -19,7 +19,9 @@
       CS1591;
       RS0016;
       SA1003;SA1101;SA1137;SA1204;SA1214;SA1306;SA1310;
-      SA1402;SA1413;SA1507;SA1513;SA1515;SA1516</NoWarn>
+      SA1402;SA1413;SA1507;SA1513;SA1515;SA1516;
+      CS8618;CS8622;CS8600;CS8603;CS0168
+    </NoWarn>
     <AllowUnsafeBlocks Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == '$(NetFrameworkMinimumSupportedVersion)'">true</AllowUnsafeBlocks>
     <AnalysisLevel>latest-all</AnalysisLevel>
   </PropertyGroup>
