@@ -23,13 +23,11 @@
   <ItemGroup>
     <ProjectReference Include="$(RepoRoot)\src\OpenTelemetry\OpenTelemetry.csproj" />
     <PackageReference Include="IronSnappy" />
+    <PackageReference Include="System.Text.Json"/>
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="System.Net.Http" Condition="'$(TargetFramework)' == '$(NetFrameworkMinimumSupportedVersion)'" />
-    <Reference Include="System.Text.Json">
-      <HintPath>..\..\..\..\.nuget\packages\system.text.json\4.7.2\lib\netstandard2.0\System.Text.Json.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
