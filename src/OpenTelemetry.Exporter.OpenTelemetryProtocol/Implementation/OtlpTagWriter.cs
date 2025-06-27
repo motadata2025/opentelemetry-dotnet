@@ -71,6 +71,19 @@ internal sealed class OtlpTagWriter : TagWriter<RepeatedField<OtlpCommon.KeyValu
             tagKey);
     }
 
+    protected override bool TryWriteEmptyTag(ref RepeatedField<OtlpCommon.KeyValue> tags, string key, object? value)
+    {
+        // OtlpCommon.AnyValue does not support null values, so we cannot write an empty tag.
+        // This is different from Zipkin and Console exporters.
+        if (value == null)
+        {
+            return false;
+        }
+
+        tags.Add(new OtlpCommon.KeyValue { Key = key, Value = new OtlpCommon.AnyValue() });
+        return true;
+    }
+
     private sealed class OtlpArrayTagWriter : ArrayTagWriter<OtlpCommon.ArrayValue>
     {
         public override OtlpCommon.ArrayValue BeginWriteArray() => new();
